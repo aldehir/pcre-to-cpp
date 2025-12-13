@@ -309,9 +309,9 @@ Each alternative is tried in order. First match wins:
 { ... }
 ```
 
-### Quantifiers
+### Quantifiers (Simple Case)
 
-Quantifiers use iterative loops, not recursion:
+When a quantifier is not followed by something that could fail, it uses simple iterative loops:
 
 ```cpp
 // One or more: \p{L}+
@@ -331,6 +331,92 @@ Quantifiers use iterative loops, not recursion:
     }
 }
 ```
+
+### Quantifiers with Backtracking
+
+When a quantifier is followed by a lookahead, literal, or another quantifier, the generator produces **iterative backtracking** code. This handles patterns like `\s+(?!\S)` and `\s*[\r\n]+` correctly.
+
+**Why backtracking is needed:** For `\s+(?!\S)` on input `"  x"`:
+1. `\s+` greedily matches both spaces
+2. `(?!\S)` checks next char - it's `x` (non-whitespace) → fails
+3. Must backtrack: `\s+` gives up one space
+4. `(?!\S)` checks next char - it's ` ` (whitespace) → succeeds!
+
+**Strategy:** Collect all possible match positions upfront, then try from longest to shortest:
+
+```cpp
+// Sequence with backtracking: \s+(?!\S)
+{
+    bool seq_matched = false;
+
+    // Collect all positions for \s+
+    std::vector<size_t> q0_pos;
+    q0_pos.push_back(match_pos);
+    while (true) {
+        size_t save_pos = match_pos;
+        // Try to match \s
+        if (flags.is_whitespace) { match_pos++; }
+        else { matched = false; }
+
+        if (matched && match_pos > save_pos) {
+            q0_pos.push_back(match_pos);
+        } else {
+            match_pos = save_pos;
+            break;
+        }
+    }
+
+    // Try positions from longest to shortest
+    for (size_t i0 = q0_pos.size(); i0 > 1; i0--) {  // >1 for min_count=1
+        match_pos = q0_pos[i0 - 1];
+        matched = true;
+
+        // Test lookahead (?!\S)
+        // ... lookahead code ...
+
+        if (matched) { seq_matched = true; break; }
+    }
+
+    matched = seq_matched;
+}
+```
+
+### Multi-Quantifier Backtracking
+
+For patterns with multiple quantifiers like `\s*[\r\n]+`, nested loops handle all combinations:
+
+```cpp
+// Sequence with backtracking (2 quantifiers): \s*[\r\n]+
+{
+    bool seq_matched = false;
+
+    // Collect positions for \s*
+    std::vector<size_t> q0_pos;
+    // ... collect all positions ...
+
+    // Try q0 positions (outer loop)
+    for (size_t i0 = q0_pos.size(); i0 > 0; i0--) {  // >0 for min_count=0
+        match_pos = q0_pos[i0 - 1];
+
+        // Collect positions for [\r\n]+ from this point
+        std::vector<size_t> q1_pos;
+        // ... collect positions starting from current q0 position ...
+
+        // Try q1 positions (inner loop)
+        for (size_t i1 = q1_pos.size(); i1 > 1; i1--) {  // >1 for min_count=1
+            match_pos = q1_pos[i1 - 1];
+            matched = true;
+
+            if (matched) { seq_matched = true; break; }
+        }
+        if (seq_matched) break;
+    }
+
+    matched = seq_matched;
+}
+```
+
+This ensures patterns like `\s*[\r\n]+` correctly match `\n\n` by backtracking `\s*` to let `[\r\n]+` consume the newlines.
 
 ### Lookahead
 
@@ -377,13 +463,19 @@ if (matched && unicode_tolower(_get_cpt(match_pos)) == 's') {
 3. **Approximate subcategories**: `\p{Lt}` (titlecase) approximated as uppercase
 4. **No script categories**: Only `\p{Han}` is implemented
 
+### Implemented Features
+
+1. **Iterative backtracking**: Full support for quantifiers followed by lookaheads or other patterns
+2. **Multi-quantifier backtracking**: Nested loops for patterns like `\s*[\r\n]+`
+3. **Stack-safe**: All backtracking uses explicit vectors, not call stack recursion
+
 ### Potential Improvements
 
 1. **Optimization**: Combine adjacent literal matches into string comparisons
 2. **DFA compilation**: Convert simple patterns to state machines
 3. **More scripts**: Add `\p{Hiragana}`, `\p{Katakana}`, etc.
 4. **Lookbehind**: Could be added for fixed-width patterns
-5. **Testing**: Add test suite comparing output to Python `regex` module
+5. **Lazy quantifiers**: Currently parsed but not fully optimized
 
 ## File Structure
 
@@ -391,10 +483,17 @@ if (matched && unicode_tolower(_get_cpt(match_pos)) == 's') {
 pcre-to-cpp/
 ├── pcre_to_cpp.py      # Main converter script
 ├── design.md           # This document
-├── plan.md             # Original planning notes
+├── run_tests.py        # Test runner script
+├── tests.json          # Test patterns and expected inputs
 ├── examples/
 │   ├── unicode.cpp     # Reference implementation with helpers
 │   ├── unicode.h       # Header with unicode_cpt_flags
 │   └── tokenizers.cpp  # Example PCRE patterns from LLM tokenizers
-└── staging/            # Build artifacts
+└── test-harness/
+    ├── CMakeLists.txt  # Build configuration
+    ├── main.cpp        # Test harness entry point
+    ├── unicode.cpp     # Unicode helper implementations
+    ├── unicode.h       # Unicode types and flags
+    ├── generated/      # Generated C++ pattern code
+    └── build/          # Build artifacts
 ```

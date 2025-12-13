@@ -1,161 +1,22 @@
 {
     "patterns": [
         {
-            "name": "simple_words",
-            "pattern": "\\w+",
+            "name": "gpt2",
+            "pattern": "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)",
             "tests": [
                 "Hello World",
-                "foo bar baz",
-                "test123",
-                "one_two_three"
-            ]
-        },
-        {
-            "name": "whitespace_split",
-            "pattern": "\\s+|\\S+",
-            "tests": [
-                "Hello World",
-                "  multiple   spaces  ",
-                "no-spaces",
-                "tabs\there\tand\tthere"
-            ]
-        },
-        {
-            "name": "numbers",
-            "pattern": "\\d+",
-            "tests": [
-                "123",
-                "foo 456 bar",
-                "1 2 3 4 5",
-                "no numbers here"
-            ]
-        },
-        {
-            "name": "unicode_letters",
-            "pattern": "\\p{L}+",
-            "tests": [
-                "Hello",
-                "Bonjour",
-                "Привет",
-                "你好",
-                "Hello123World"
-            ]
-        },
-        {
-            "name": "unicode_letters_and_numbers",
-            "pattern": "\\p{L}+|\\p{N}+",
-            "tests": [
-                "Hello123World",
-                "abc 123 def",
-                "混合123文字"
-            ]
-        },
-        {
-            "name": "contractions",
-            "pattern": "'s|'t|'re|'ve|'m|'ll|'d|\\w+",
-            "tests": [
-                "I'm",
-                "you're",
-                "they've",
-                "she'll",
                 "I'm going to the store",
-                "You're welcome"
+                "The year is 2024",
+                "Hello, World!",
+                "  trailing spaces  ",
+                "Multiple   spaces",
+                "It's a test",
+                "123 numbers 456"
             ]
         },
         {
-            "name": "case_insensitive_contractions",
-            "pattern": "(?i:'s|'t|'re|'ve|'m|'ll|'d)|\\w+",
-            "tests": [
-                "I'M",
-                "YOU'RE",
-                "THEY'VE",
-                "She'LL",
-                "I'M GOING"
-            ]
-        },
-        {
-            "name": "optional_space_letters",
-            "pattern": " ?\\p{L}+",
-            "tests": [
-                "Hello World",
-                " Spaced",
-                "NoSpace",
-                "A B C"
-            ]
-        },
-        {
-            "name": "negative_lookahead",
-            "pattern": "\\s+(?!\\S)|\\s+",
-            "tests": [
-                "Hello World",
-                "  two spaces  ",
-                "trailing   ",
-                "no trailing"
-            ]
-        },
-        {
-            "name": "quantifiers",
-            "pattern": "\\d{3}|\\d{1,2}|\\w+",
-            "tests": [
-                "123",
-                "12",
-                "1",
-                "1234",
-                "foo 12 bar 123 baz"
-            ]
-        },
-        {
-            "name": "alternation_priority",
-            "pattern": "abc|ab|a",
-            "tests": [
-                "a",
-                "ab",
-                "abc",
-                "abcd",
-                "a ab abc"
-            ]
-        },
-        {
-            "name": "character_class",
-            "pattern": "[a-z]+|[A-Z]+|[0-9]+",
-            "tests": [
-                "abc",
-                "ABC",
-                "123",
-                "aaBBcc",
-                "Hello World 123"
-            ]
-        },
-        {
-            "name": "negated_class",
-            "pattern": "[^\\s]+",
-            "tests": [
-                "Hello World",
-                "  spaces  ",
-                "no-spaces-here"
-            ]
-        },
-        {
-            "name": "special_chars",
-            "pattern": "[\\r\\n]+|[^\\r\\n]+",
-            "tests": [
-                "Hello\nWorld",
-                "Line1\r\nLine2",
-                "No newlines",
-                "\n\n\n"
-            ]
-        },
-        {
-            "name": "hex_escape",
-            "pattern": "\\x20+|\\S+",
-            "tests": [
-                "Hello World",
-                "  multiple  spaces  "
-            ]
-        },
-        {
-            "name": "gpt2_simplified",
-            "pattern": "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)|\\s+",
+            "name": "tekken",
+            "pattern": "[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]*[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]+|[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]+[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]*|\\p{N}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+",
             "tests": [
                 "Hello World",
                 "I'm going to the store",
