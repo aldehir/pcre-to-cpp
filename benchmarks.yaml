@@ -10,7 +10,7 @@
   # STL approximation: Unicode property classes replaced with ASCII
   stl_pattern: "'s|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^\\s A-Za-z0-9]+|\\s+(?!\\S)"
   inputs:
-    - natural_language
+    - benchmark
 
 # Llama3 style tokenizer
 - name: llama3
@@ -18,7 +18,7 @@
   # STL approximation: case-insensitive group expanded, Unicode replaced
   stl_pattern: "(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\\r\\n A-Za-z0-9]?[A-Za-z]+|[0-9]{1,3}| ?[^\\s A-Za-z0-9]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
   inputs:
-    - natural_language
+    - benchmark
 
 # GPT-4o style tokenizer
 - name: gpt4o
@@ -26,4 +26,4 @@
   # STL approximation: Unicode properties replaced with ASCII, CamelCase approximation
   stl_pattern: "[^\\r\\nA-Za-z0-9]?[A-Z]*[a-z]+(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[^\\r\\nA-Za-z0-9]?[A-Z]+[a-z]*(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[0-9]{1,3}| ?[^\\sA-Za-z0-9]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
   inputs:
-    - natural_language
+    - benchmark
