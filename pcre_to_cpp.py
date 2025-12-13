@@ -1645,7 +1645,11 @@ class CppEmitter:
                 return f"{child}{{{ast.min_count},{ast.max_count}}}"
         elif isinstance(ast, Alternation):
             alts = [self._ast_to_pattern(a, depth + 1) for a in ast.alternatives]
-            return "|".join(alts)
+            alt_str = "|".join(alts)
+            # Wrap in parentheses if nested (not at top level)
+            if depth > 0:
+                return f"({alt_str})"
+            return alt_str
         elif isinstance(ast, Sequence):
             parts = [self._ast_to_pattern(c, depth + 1) for c in ast.children]
             return "".join(parts)
