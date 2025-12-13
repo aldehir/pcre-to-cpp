@@ -146,6 +146,213 @@ Node = Union[
     AnyChar, Quantifier, Alternation, Sequence, GroupNode, Lookahead, Anchor
 ]
 
+
+def nodes_equal(a: Node, b: Node) -> bool:
+    """Deep equality check for AST nodes."""
+    if type(a) != type(b):
+        return False
+    if isinstance(a, LiteralChar):
+        return a.char == b.char
+    if isinstance(a, SpecialChar):
+        return a.char == b.char
+    if isinstance(a, Predefined):
+        return a.name == b.name
+    if isinstance(a, UnicodeCategory):
+        return a.category == b.category and a.negated == b.negated
+    if isinstance(a, AnyChar):
+        return True
+    if isinstance(a, Anchor):
+        return a.type == b.type
+    if isinstance(a, CharClass):
+        if a.negated != b.negated or len(a.items) != len(b.items):
+            return False
+        for x, y in zip(a.items, b.items):
+            # Items can be tuples (ranges) or nodes
+            if isinstance(x, tuple) and isinstance(y, tuple):
+                if x != y:
+                    return False
+            elif isinstance(x, tuple) or isinstance(y, tuple):
+                return False
+            elif not nodes_equal(x, y):
+                return False
+        return True
+    if isinstance(a, Quantifier):
+        return (a.min_count == b.min_count and
+                a.max_count == b.max_count and
+                a.greedy == b.greedy and
+                nodes_equal(a.child, b.child))
+    if isinstance(a, Sequence):
+        if len(a.children) != len(b.children):
+            return False
+        return all(nodes_equal(x, y) for x, y in zip(a.children, b.children))
+    if isinstance(a, Alternation):
+        if len(a.alternatives) != len(b.alternatives):
+            return False
+        return all(nodes_equal(x, y) for x, y in zip(a.alternatives, b.alternatives))
+    if isinstance(a, GroupNode):
+        return (a.capturing == b.capturing and
+                a.case_insensitive == b.case_insensitive and
+                nodes_equal(a.child, b.child))
+    if isinstance(a, Lookahead):
+        return a.positive == b.positive and nodes_equal(a.child, b.child)
+    return False
+
+
+# =============================================================================
+# AST Optimizer
+# =============================================================================
+
+class ASTOptimizer:
+    """Optimizes regex AST before code generation."""
+
+    def optimize(self, ast: Node) -> Node:
+        """Apply all optimizations (run until fixed point)."""
+        prev = None
+        current = ast
+        # Run until no changes (fixed point)
+        while not self._ast_equal(prev, current):
+            prev = current
+            current = self._transform(current)
+        return current
+
+    def _ast_equal(self, a: Optional[Node], b: Optional[Node]) -> bool:
+        """Check if two ASTs are equal (handles None)."""
+        if a is None or b is None:
+            return a is b
+        return nodes_equal(a, b)
+
+    def _transform(self, node: Node) -> Node:
+        """Recursively transform a node and its children."""
+        # First transform children
+        node = self._transform_children(node)
+        # Then apply optimizations to this node
+        node = self._flatten_sequence(node)
+        node = self._alternation_to_charclass(node)
+        node = self._extract_common_prefix(node)
+        return node
+
+    def _transform_children(self, node: Node) -> Node:
+        """Recursively transform children of a node."""
+        if isinstance(node, (LiteralChar, SpecialChar, Predefined,
+                             UnicodeCategory, AnyChar, Anchor)):
+            return node  # Leaf nodes
+
+        if isinstance(node, CharClass):
+            # Transform items that are nodes (not tuples for ranges)
+            new_items = []
+            for item in node.items:
+                if isinstance(item, tuple):
+                    new_items.append(item)
+                else:
+                    new_items.append(self._transform(item))
+            return CharClass(new_items, node.negated)
+
+        if isinstance(node, Quantifier):
+            return Quantifier(self._transform(node.child),
+                              node.min_count, node.max_count, node.greedy)
+
+        if isinstance(node, Sequence):
+            return Sequence([self._transform(c) for c in node.children])
+
+        if isinstance(node, Alternation):
+            return Alternation([self._transform(a) for a in node.alternatives])
+
+        if isinstance(node, GroupNode):
+            return GroupNode(self._transform(node.child),
+                             node.capturing, node.case_insensitive)
+
+        if isinstance(node, Lookahead):
+            return Lookahead(self._transform(node.child), node.positive)
+
+        return node
+
+    def _flatten_sequence(self, node: Node) -> Node:
+        """Flatten nested sequences and unwrap trivial groups."""
+        if isinstance(node, Sequence):
+            flattened = []
+            for child in node.children:
+                if isinstance(child, Sequence):
+                    flattened.extend(child.children)
+                else:
+                    flattened.append(child)
+            if len(flattened) == 0:
+                return Sequence([])
+            if len(flattened) == 1:
+                return flattened[0]
+            return Sequence(flattened)
+
+        # Unwrap non-capturing, non-case-insensitive groups
+        if isinstance(node, GroupNode):
+            if not node.capturing and not node.case_insensitive:
+                return node.child
+
+        return node
+
+    def _is_single_char(self, node: Node) -> bool:
+        """Check if node matches exactly one character."""
+        return isinstance(node, (LiteralChar, SpecialChar, Predefined, UnicodeCategory))
+
+    def _alternation_to_charclass(self, node: Node) -> Node:
+        """Convert alternation of single chars to CharClass."""
+        if not isinstance(node, Alternation):
+            return node
+
+        # Check if ALL alternatives are single-char items
+        if not all(self._is_single_char(alt) for alt in node.alternatives):
+            return node
+
+        return CharClass(items=list(node.alternatives), negated=False)
+
+    def _to_sequence(self, node: Node) -> Sequence:
+        """Wrap non-sequence nodes in a Sequence."""
+        if isinstance(node, Sequence):
+            return node
+        return Sequence([node])
+
+    def _extract_common_prefix(self, node: Node) -> Node:
+        """Extract common prefix from alternation."""
+        if not isinstance(node, Alternation):
+            return node
+
+        if len(node.alternatives) < 2:
+            return node
+
+        # Convert all alternatives to sequences
+        seqs = [self._to_sequence(alt) for alt in node.alternatives]
+
+        # Find common prefix length
+        prefix_len = 0
+        while True:
+            # Check if all sequences have enough elements
+            if not all(len(s.children) > prefix_len for s in seqs):
+                break
+            # Check if all elements at this position are equal
+            first = seqs[0].children[prefix_len]
+            if not all(nodes_equal(s.children[prefix_len], first) for s in seqs[1:]):
+                break
+            prefix_len += 1
+
+        if prefix_len == 0:
+            return node
+
+        # Build: prefix + Alternation(suffixes)
+        prefix = list(seqs[0].children[:prefix_len])
+        suffixes = []
+        for s in seqs:
+            remaining = s.children[prefix_len:]
+            if len(remaining) == 0:
+                suffixes.append(Sequence([]))  # Empty match
+            elif len(remaining) == 1:
+                suffixes.append(remaining[0])
+            else:
+                suffixes.append(Sequence(list(remaining)))
+
+        result_children = prefix + [Alternation(suffixes)]
+        if len(result_children) == 1:
+            return result_children[0]
+        return Sequence(result_children)
+
+
 # =============================================================================
 # Hand-written Recursive Descent Parser
 # =============================================================================
@@ -720,7 +927,7 @@ class CppEmitter:
         if isinstance(node, LiteralChar):
             self._generate_literal_match(node, case_insensitive)
         elif isinstance(node, CharClass):
-            self._generate_charclass_match(node)
+            self._generate_charclass_match(node, case_insensitive)
         elif isinstance(node, UnicodeCategory):
             self._generate_unicode_cat_match(node)
         elif isinstance(node, Predefined):
@@ -736,7 +943,7 @@ class CppEmitter:
         elif isinstance(node, GroupNode):
             self._generate_group_match(node)
         elif isinstance(node, Lookahead):
-            self._generate_lookahead_match(node)
+            self._generate_lookahead_match(node, case_insensitive)
         elif isinstance(node, Alternation):
             self._generate_nested_alternation(node, case_insensitive)
         elif isinstance(node, Anchor):
@@ -772,14 +979,15 @@ class CppEmitter:
             } else if (matched) { matched = false; }
         ''', locals())
 
-    def _generate_charclass_match(self, node: CharClass):
+    def _generate_charclass_match(self, node: CharClass, case_insensitive: bool = False):
         """Generate match for character class."""
         var = self._temp_var("cpt")
         flags_var = f"flags_{var}"
 
         # Generate pattern comment for this character class
         class_pattern = self._ast_to_pattern(node)
-        self._emit(f"// Character class: {class_pattern}")
+        ci_suffix = " (case-insensitive)" if case_insensitive else ""
+        self._emit(f"// Character class: {class_pattern}{ci_suffix}")
 
         with self._block("if (matched) {"):
             self._emit(f"uint32_t {var} = _get_cpt(match_pos);")
@@ -791,10 +999,18 @@ class CppEmitter:
             for item in node.items:
                 if isinstance(item, tuple):
                     start, end = item
-                    conditions.append(f"({var} >= {ord(start)} && {var} <= {ord(end)})")
+                    if case_insensitive and start.isalpha() and end.isalpha():
+                        # Case-insensitive range - compare lowercased
+                        conditions.append(f"(unicode_tolower({var}) >= {ord(start.lower())} && unicode_tolower({var}) <= {ord(end.lower())})")
+                    else:
+                        conditions.append(f"({var} >= {ord(start)} && {var} <= {ord(end)})")
                     cond_comments.append(f"{self._escape_char(start)}-{self._escape_char(end)}")
                 elif isinstance(item, LiteralChar):
-                    conditions.append(f"({var} == {ord(item.char)})")
+                    if case_insensitive and item.char.isalpha():
+                        # Case-insensitive literal - compare lowercased
+                        conditions.append(f"(unicode_tolower({var}) == {ord(item.char.lower())})")
+                    else:
+                        conditions.append(f"({var} == {ord(item.char)})")
                     cond_comments.append(self._escape_char(item.char))
                 elif isinstance(item, SpecialChar):
                     conditions.append(f"({var} == {ord(item.char)})")
@@ -809,7 +1025,10 @@ class CppEmitter:
                     conditions.append(f"({cond})")
                     cond_comments.append(f"\\{item.name}")
                 elif isinstance(item, str):
-                    conditions.append(f"({var} == {ord(item)})")
+                    if case_insensitive and item.isalpha():
+                        conditions.append(f"(unicode_tolower({var}) == {ord(item.lower())})")
+                    else:
+                        conditions.append(f"({var} == {ord(item)})")
                     cond_comments.append(self._escape_char(item))
 
             if conditions:
@@ -1092,7 +1311,7 @@ class CppEmitter:
             # Just match the child
             self._generate_node_match(node.child)
 
-    def _generate_lookahead_match(self, node: Lookahead):
+    def _generate_lookahead_match(self, node: Lookahead, case_insensitive: bool = False):
         """Generate lookahead assertion."""
         lookahead_type = 'Positive' if node.positive else 'Negative'
         self._emit(f"// {lookahead_type} lookahead")
@@ -1103,7 +1322,7 @@ class CppEmitter:
                 bool save_matched = matched;
             ''')
 
-            self._generate_node_match(node.child)
+            self._generate_node_match(node.child, case_insensitive)
 
             self._emit("bool lookahead_success = matched;")
             self._emit("match_pos = save_match_pos;")
@@ -1308,7 +1527,7 @@ class CppEmitter:
     def _generate_nested_alternation(self, node: Alternation, case_insensitive: bool = False):
         """Generate nested alternation (within a sequence)."""
         self._emit("// Nested alternation")
-        with self._block():
+        with self._block("if (matched) {"):
             self._emit_block('''
                 size_t alt_save = match_pos;
                 bool alt_matched = false;
@@ -1479,6 +1698,9 @@ def main():
     except ValueError as e:
         print(f"Error parsing pattern: {e}", file=sys.stderr)
         sys.exit(1)
+
+    # Optimize the AST
+    ast = ASTOptimizer().optimize(ast)
 
     # Generate C++ code
     emitter = CppEmitter(args.name)
