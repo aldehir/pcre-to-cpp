@@ -26,14 +26,22 @@ if sys.platform == 'win32':
 # Paths
 ROOT_DIR = Path(__file__).parent
 HARNESS_DIR = ROOT_DIR / "test-harness"
-BUILD_DIR = HARNESS_DIR / "build"
-GENERATED_DIR = HARNESS_DIR / "generated"
 
 
-def generate_cpp(pattern: str) -> bool:
+def get_build_dir(name: str) -> Path:
+    """Get build directory for a specific test."""
+    return HARNESS_DIR / "builds" / "tests" / name
+
+
+def get_generated_file(name: str) -> Path:
+    """Get generated C++ file path for a specific test."""
+    return HARNESS_DIR / "generated" / "tests" / f"{name}.cpp"
+
+
+def generate_cpp(pattern: str, name: str) -> bool:
     """Generate C++ code from PCRE pattern."""
-    output_file = GENERATED_DIR / "pattern_split.cpp"
-    GENERATED_DIR.mkdir(exist_ok=True)
+    output_file = get_generated_file(name)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     result = subprocess.run(
         [
@@ -55,19 +63,23 @@ def generate_cpp(pattern: str) -> bool:
     return True
 
 
-def build_cpp() -> bool:
+def build_cpp(name: str) -> bool:
     """Build the C++ test harness."""
-    BUILD_DIR.mkdir(exist_ok=True)
+    build_dir = get_build_dir(name)
+    build_dir.mkdir(parents=True, exist_ok=True)
 
     # Clean CMake cache if pattern changed (force reconfigure)
-    cache_file = BUILD_DIR / "CMakeCache.txt"
+    cache_file = build_dir / "CMakeCache.txt"
     if cache_file.exists():
         cache_file.unlink()
 
-    # Configure
+    # Pattern file path relative to HARNESS_DIR (where CMakeLists.txt is)
+    pattern_file = f"generated/tests/{name}.cpp"
+
+    # Configure (build dir is 3 levels deep: builds/tests/{name}/)
     result = subprocess.run(
-        ["cmake", ".."],
-        cwd=BUILD_DIR,
+        ["cmake", f"-DPATTERN_FILE={pattern_file}", "../../.."],
+        cwd=build_dir,
         capture_output=True,
         text=True
     )
@@ -78,7 +90,7 @@ def build_cpp() -> bool:
     # Build
     result = subprocess.run(
         ["cmake", "--build", "."],
-        cwd=BUILD_DIR,
+        cwd=build_dir,
         capture_output=True,
         text=True
     )
@@ -90,18 +102,20 @@ def build_cpp() -> bool:
     return True
 
 
-def run_cpp_tests(test_strings: list[str]) -> list[list[str]] | None:
+def run_cpp_tests(name: str, test_strings: list[str]) -> list[list[str]] | None:
     """Run C++ test harness on test strings."""
+    build_dir = get_build_dir(name)
+
     # Find executable (Windows vs Unix)
-    exe_path = BUILD_DIR / "regex_test.exe"
+    exe_path = build_dir / "regex_test.exe"
     if not exe_path.exists():
-        exe_path = BUILD_DIR / "regex_test"
+        exe_path = build_dir / "regex_test"
     if not exe_path.exists():
-        exe_path = BUILD_DIR / "Debug" / "regex_test.exe"
+        exe_path = build_dir / "Debug" / "regex_test.exe"
     if not exe_path.exists():
-        exe_path = BUILD_DIR / "Release" / "regex_test.exe"
+        exe_path = build_dir / "Release" / "regex_test.exe"
     if not exe_path.exists():
-        print(f"Could not find regex_test executable in {BUILD_DIR}", file=sys.stderr)
+        print(f"Could not find regex_test executable in {build_dir}", file=sys.stderr)
         return None
 
     input_json = json.dumps({"strings": test_strings})
@@ -220,7 +234,7 @@ def load_test_inputs(input_names: list[str]) -> list[str]:
     return all_tests
 
 
-def run_test(pattern: str, test_strings: list[str], verbose: bool = False,
+def run_test(pattern: str, name: str, test_strings: list[str], verbose: bool = False,
              tokenizer: str = None) -> bool:
     """Run a complete test cycle for a pattern."""
     print(f"\n{'='*60}")
@@ -231,17 +245,17 @@ def run_test(pattern: str, test_strings: list[str], verbose: bool = False,
 
     # Step 1: Generate C++
     print("\n[1/4] Generating C++ code...")
-    if not generate_cpp(pattern):
+    if not generate_cpp(pattern, name):
         return False
 
     # Step 2: Build
     print("\n[2/4] Building C++ code...")
-    if not build_cpp():
+    if not build_cpp(name):
         return False
 
     # Step 3: Run C++ tests
     print("\n[3/4] Running C++ tests...")
-    cpp_results = run_cpp_tests(test_strings)
+    cpp_results = run_cpp_tests(name, test_strings)
     if cpp_results is None:
         return False
 
@@ -348,7 +362,7 @@ Example usage:
             print(f"Warning: No test strings loaded for {name}", file=sys.stderr)
             continue
         # Always use regex-based testing (no tokenizer parameter)
-        if not run_test(pattern, test_strings, args.verbose, tokenizer=None):
+        if not run_test(pattern, name, test_strings, args.verbose, tokenizer=None):
             all_success = False
 
     if all_success:

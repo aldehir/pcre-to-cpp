@@ -25,14 +25,22 @@ if sys.platform == 'win32':
 # Paths
 ROOT_DIR = Path(__file__).parent
 HARNESS_DIR = ROOT_DIR / "test-harness"
-BUILD_DIR = HARNESS_DIR / "build"
-GENERATED_DIR = HARNESS_DIR / "generated"
 
 
-def generate_cpp(pattern: str) -> bool:
+def get_build_dir(name: str) -> Path:
+    """Get build directory for a specific benchmark."""
+    return HARNESS_DIR / "builds" / "benchmarks" / name
+
+
+def get_generated_file(name: str) -> Path:
+    """Get generated C++ file path for a specific benchmark."""
+    return HARNESS_DIR / "generated" / "benchmarks" / f"{name}.cpp"
+
+
+def generate_cpp(pattern: str, name: str) -> bool:
     """Generate C++ code from PCRE pattern."""
-    output_file = GENERATED_DIR / "pattern_split.cpp"
-    GENERATED_DIR.mkdir(exist_ok=True)
+    output_file = get_generated_file(name)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
 
     result = subprocess.run(
         [
@@ -54,19 +62,23 @@ def generate_cpp(pattern: str) -> bool:
     return True
 
 
-def build_cpp() -> bool:
+def build_cpp(name: str) -> bool:
     """Build the C++ benchmark harness."""
-    BUILD_DIR.mkdir(exist_ok=True)
+    build_dir = get_build_dir(name)
+    build_dir.mkdir(parents=True, exist_ok=True)
 
     # Clean CMake cache if pattern changed (force reconfigure)
-    cache_file = BUILD_DIR / "CMakeCache.txt"
+    cache_file = build_dir / "CMakeCache.txt"
     if cache_file.exists():
         cache_file.unlink()
 
-    # Configure
+    # Pattern file path relative to HARNESS_DIR (where CMakeLists.txt is)
+    pattern_file = f"generated/benchmarks/{name}.cpp"
+
+    # Configure (build dir is 3 levels deep: builds/benchmarks/{name}/)
     result = subprocess.run(
-        ["cmake", ".."],
-        cwd=BUILD_DIR,
+        ["cmake", f"-DPATTERN_FILE={pattern_file}", "../../.."],
+        cwd=build_dir,
         capture_output=True,
         text=True
     )
@@ -77,7 +89,7 @@ def build_cpp() -> bool:
     # Build
     result = subprocess.run(
         ["cmake", "--build", "."],
-        cwd=BUILD_DIR,
+        cwd=build_dir,
         capture_output=True,
         text=True
     )
@@ -89,13 +101,14 @@ def build_cpp() -> bool:
     return True
 
 
-def find_benchmark_exe() -> Path | None:
+def find_benchmark_exe(name: str) -> Path | None:
     """Find the benchmark executable."""
+    build_dir = get_build_dir(name)
     candidates = [
-        BUILD_DIR / "benchmark.exe",
-        BUILD_DIR / "benchmark",
-        BUILD_DIR / "Debug" / "benchmark.exe",
-        BUILD_DIR / "Release" / "benchmark.exe",
+        build_dir / "benchmark.exe",
+        build_dir / "benchmark",
+        build_dir / "Debug" / "benchmark.exe",
+        build_dir / "Release" / "benchmark.exe",
     ]
     for path in candidates:
         if path.exists():
@@ -103,11 +116,11 @@ def find_benchmark_exe() -> Path | None:
     return None
 
 
-def run_benchmark(stl_pattern: str, test_strings: list[str], verbose: bool = False) -> dict | None:
+def run_benchmark(name: str, stl_pattern: str, test_strings: list[str], verbose: bool = False) -> dict | None:
     """Run benchmark comparing generated C++ vs STL regex."""
-    exe_path = find_benchmark_exe()
+    exe_path = find_benchmark_exe(name)
     if not exe_path:
-        print(f"Could not find benchmark executable in {BUILD_DIR}", file=sys.stderr)
+        print(f"Could not find benchmark executable in {get_build_dir(name)}", file=sys.stderr)
         return None
 
     input_json = json.dumps({
@@ -198,17 +211,17 @@ def run_benchmark_test(pcre_pattern: str, stl_pattern: str, test_strings: list[s
 
     # Step 1: Generate C++ from PCRE pattern
     print("\n[1/3] Generating C++ code from PCRE pattern...")
-    if not generate_cpp(pcre_pattern):
+    if not generate_cpp(pcre_pattern, name):
         return False
 
     # Step 2: Build
     print("\n[2/3] Building benchmark executable...")
-    if not build_cpp():
+    if not build_cpp(name):
         return False
 
     # Step 3: Run benchmark with STL pattern
     print("\n[3/3] Running benchmark...")
-    results = run_benchmark(stl_pattern, test_strings, verbose)
+    results = run_benchmark(name, stl_pattern, test_strings, verbose)
     if results is None:
         return False
 
