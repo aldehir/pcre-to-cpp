@@ -1,3 +1,408 @@
+=== Benchmark Results ===
+Pattern: 's|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^\s A-Za-z0-...
+Iterations: 50
+STL Regex compile: OK
+
+Test 1: "Hello World"
+  Generated: 0.194ms (2 tokens)
+  STL Regex: 2.977ms (2 tokens)
+  Speedup:   15.3x
+
+Test 2: "The cat sat on the mat"
+  Generated: 0.328ms (6 tokens)
+  STL Regex: 6.538ms (6 tokens)
+  Speedup:   20.0x
+
+Test 3: "I like apples"
+  Generated: 0.219ms (3 tokens)
+  STL Regex: 3.804ms (3 tokens)
+  Speedup:   17.4x
+
+Test 4: "Good morning"
+  Generated: 0.191ms (2 tokens)
+  STL Regex: 2.902ms (2 tokens)
+  Speedup:   15.2x
+
+Test 5: "I'm going to the store"
+  Generated: 0.407ms (6 tokens)
+  STL Regex: 6.119ms (6 tokens)
+  Speedup:   15.0x
+
+Test 6: "It's a beautiful day"
+  Generated: 0.289ms (5 tokens)
+  STL Regex: 5.196ms (5 tokens)
+  Speedup:   18.0x
+
+Test 7: "They're coming tomorrow"
+  Generated: 0.285ms (4 tokens)
+  STL Regex: 4.402ms (4 tokens)
+  Speedup:   15.4x
+
+Test 8: "John's book is on the table"
+  Generated: 0.360ms (7 tokens)
+  STL Regex: 7.191ms (7 tokens)
+  Speedup:   20.0x
+
+Test 9: "I'll see you there, won't I?"
+  Generated: 0.427ms (10 tokens)
+  STL Regex: 9.284ms (10 tokens)
+  Speedup:   21.8x
+
+Test 10: "We've been waiting, but they haven't arr..."
+  Generated: 0.553ms (12 tokens)
+  STL Regex: 11.367ms (12 tokens)
+  Speedup:   20.6x
+
+Test 11: "You'd better go now, or you'll be late."
+  Generated: 0.507ms (12 tokens)
+  STL Regex: 11.254ms (12 tokens)
+  Speedup:   22.2x
+
+Test 12: "She'd've come if she could, but she coul..."
+  Generated: 0.537ms (13 tokens)
+  STL Regex: 12.026ms (13 tokens)
+  Speedup:   22.4x
+
+Test 13: "\"Hello,\" she said, \"how are you?\""
+  Generated: 0.536ms (11 tokens)
+  STL Regex: 11.713ms (11 tokens)
+  Speedup:   21.8x
+
+Test 14: "WaitΓÇöwhat did you say?!"
+  Generated: 0.397ms (7 tokens)
+  STL Regex: 7.758ms (7 tokens)
+  Speedup:   19.5x
+
+Test 15: "The items were: apples, oranges, and ban..."
+  Generated: 0.575ms (11 tokens)
+  STL Regex: 12.023ms (11 tokens)
+  Speedup:   20.9x
+
+Test 16: "He asked, \"Are you sure about this?\""
+  Generated: 0.517ms (10 tokens)
+  STL Regex: 10.578ms (10 tokens)
+  Speedup:   20.5x
+
+Test 17: "The quick brown fox jumps over the lazy ..."
+  Generated: 1.023ms (23 tokens)
+  STL Regex: 23.840ms (22 tokens)
+  Speedup:   23.3x
+
+Test 18: "I can't believe it's already December! W..."
+  Generated: 1.198ms (30 tokens)
+  STL Regex: 27.701ms (29 tokens)
+  Speedup:   23.1x
+
+Test 19: "The morning sun cast long shadows across..."
+  Generated: 1.754ms (45 tokens)
+  STL Regex: 44.989ms (43 tokens)
+  Speedup:   25.7x
+
+Test 20: "\"I'm not sure I understand,\" she said,..."
+  Generated: 1.916ms (52 tokens)
+  STL Regex: 50.054ms (50 tokens)
+  Speedup:   26.1x
+
+Test 21: "The professor cleared his throat. \"Toda..."
+  Generated: 2.307ms (54 tokens)
+  STL Regex: 56.504ms (51 tokens)
+  Speedup:   24.5x
+
+Test 22: "In the year 2024, technology had advance..."
+  Generated: 3.354ms (84 tokens)
+  STL Regex: 82.857ms (79 tokens)
+  Speedup:   24.7x
+
+Test 23: "Dr. Smith went to St. Louis at 3:00 p.m...."
+  Generated: 2.168ms (59 tokens)
+  STL Regex: 59.638ms (57 tokens)
+  Speedup:   27.5x
+
+Test 24: "It was the best of times, it was the wor..."
+  Generated: 5.141ms (147 tokens)
+  STL Regex: 140.140ms (139 tokens)
+  Speedup:   27.3x
+
+Test 25: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..."
+  Generated: 43.980ms (1 tokens)
+  STL Regex: 327.511ms (1 tokens)
+  Speedup:   7.4x
+
+=== Summary ===
+Total Generated: 69.163ms
+Total STL:       938.364ms
+Average Speedup: 20.6x
+
+=== Benchmark Results ===
+Pattern: (?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^...
+Iterations: 50
+STL Regex compile: OK
+
+Test 1: "Hello World"
+  Generated: 0.191ms (2 tokens)
+  STL Regex: 4.406ms (3 tokens)
+  Speedup:   23.1x
+
+Test 2: "The cat sat on the mat"
+  Generated: 0.365ms (6 tokens)
+  STL Regex: 13.464ms (11 tokens)
+  Speedup:   36.9x
+
+Test 3: "I like apples"
+  Generated: 0.215ms (3 tokens)
+  STL Regex: 6.604ms (5 tokens)
+  Speedup:   30.6x
+
+Test 4: "Good morning"
+  Generated: 0.184ms (2 tokens)
+  STL Regex: 4.453ms (3 tokens)
+  Speedup:   24.2x
+
+Test 5: "I'm going to the store"
+  Generated: 0.345ms (6 tokens)
+  STL Regex: 11.983ms (10 tokens)
+  Speedup:   34.8x
+
+Test 6: "It's a beautiful day"
+  Generated: 0.287ms (5 tokens)
+  STL Regex: 9.183ms (8 tokens)
+  Speedup:   32.0x
+
+Test 7: "They're coming tomorrow"
+  Generated: 0.291ms (4 tokens)
+  STL Regex: 7.139ms (6 tokens)
+  Speedup:   24.5x
+
+Test 8: "John's book is on the table"
+  Generated: 0.352ms (7 tokens)
+  STL Regex: 13.776ms (12 tokens)
+  Speedup:   39.2x
+
+Test 9: "I'll see you there, won't I?"
+  Generated: 0.454ms (10 tokens)
+  STL Regex: 16.829ms (15 tokens)
+  Speedup:   37.1x
+
+Test 10: "We've been waiting, but they haven't arr..."
+  Generated: 0.616ms (12 tokens)
+  STL Regex: 21.814ms (19 tokens)
+  Speedup:   35.4x
+
+Test 11: "You'd better go now, or you'll be late."
+  Generated: 0.545ms (12 tokens)
+  STL Regex: 21.624ms (19 tokens)
+  Speedup:   39.7x
+
+Test 12: "She'd've come if she could, but she coul..."
+  Generated: 0.569ms (13 tokens)
+  STL Regex: 22.917ms (20 tokens)
+  Speedup:   40.3x
+
+Test 13: "\"Hello,\" she said, \"how are you?\""
+  Generated: 0.505ms (10 tokens)
+  STL Regex: 17.329ms (14 tokens)
+  Speedup:   34.3x
+
+Test 14: "WaitΓÇöwhat did you say?!"
+  Generated: 0.350ms (6 tokens)
+  STL Regex: 12.579ms (10 tokens)
+  Speedup:   35.9x
+
+Test 15: "The items were: apples, oranges, and ban..."
+  Generated: 0.569ms (11 tokens)
+  STL Regex: 21.065ms (17 tokens)
+  Speedup:   37.0x
+
+Test 16: "He asked, \"Are you sure about this?\""
+  Generated: 0.507ms (10 tokens)
+  STL Regex: 18.476ms (15 tokens)
+  Speedup:   36.4x
+
+Test 17: "The quick brown fox jumps over the lazy ..."
+  Generated: 0.959ms (22 tokens)
+  STL Regex: 46.163ms (39 tokens)
+  Speedup:   48.1x
+
+Test 18: "I can't believe it's already December! W..."
+  Generated: 1.151ms (29 tokens)
+  STL Regex: 55.200ms (49 tokens)
+  Speedup:   48.0x
+
+Test 19: "The morning sun cast long shadows across..."
+  Generated: 1.698ms (43 tokens)
+  STL Regex: 89.494ms (77 tokens)
+  Speedup:   52.7x
+
+Test 20: "\"I'm not sure I understand,\" she said,..."
+  Generated: 1.792ms (49 tokens)
+  STL Regex: 88.468ms (77 tokens)
+  Speedup:   49.4x
+
+Test 21: "The professor cleared his throat. \"Toda..."
+  Generated: 2.094ms (49 tokens)
+  STL Regex: 90.287ms (75 tokens)
+  Speedup:   43.1x
+
+Test 22: "In the year 2024, technology had advance..."
+  Generated: 3.311ms (83 tokens)
+  STL Regex: 163.865ms (137 tokens)
+  Speedup:   49.5x
+
+Test 23: "Dr. Smith went to St. Louis at 3:00 p.m...."
+  Generated: 2.088ms (56 tokens)
+  STL Regex: 99.224ms (83 tokens)
+  Speedup:   47.5x
+
+Test 24: "It was the best of times, it was the wor..."
+  Generated: 5.032ms (145 tokens)
+  STL Regex: 294.206ms (255 tokens)
+  Speedup:   58.5x
+
+Test 25: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..."
+  Generated: 47.147ms (1 tokens)
+  STL Regex: 325.390ms (1 tokens)
+  Speedup:   6.9x
+
+=== Summary ===
+Total Generated: 71.617ms
+Total STL:       1475.938ms
+Average Speedup: 37.8x
+
+=== Benchmark Results ===
+Pattern: [^\r\nA-Za-z0-9]?[A-Z]*[a-z]+(?:'[sS]|'[tT]|'[rR][eE]|'[vV][...
+Iterations: 50
+STL Regex compile: OK
+
+Test 1: "Hello World"
+  Generated: 0.204ms (2 tokens)
+  STL Regex: 6.146ms (2 tokens)
+  Speedup:   30.1x
+
+Test 2: "The cat sat on the mat"
+  Generated: 0.380ms (6 tokens)
+  STL Regex: 13.468ms (6 tokens)
+  Speedup:   35.5x
+
+Test 3: "I like apples"
+  Generated: 0.270ms (3 tokens)
+  STL Regex: 8.389ms (3 tokens)
+  Speedup:   31.1x
+
+Test 4: "Good morning"
+  Generated: 0.208ms (2 tokens)
+  STL Regex: 6.694ms (2 tokens)
+  Speedup:   32.1x
+
+Test 5: "I'm going to the store"
+  Generated: 0.401ms (5 tokens)
+  STL Regex: 12.885ms (5 tokens)
+  Speedup:   32.2x
+
+Test 6: "It's a beautiful day"
+  Generated: 0.324ms (4 tokens)
+  STL Regex: 10.928ms (4 tokens)
+  Speedup:   33.8x
+
+Test 7: "They're coming tomorrow"
+  Generated: 0.315ms (3 tokens)
+  STL Regex: 10.579ms (3 tokens)
+  Speedup:   33.6x
+
+Test 8: "John's book is on the table"
+  Generated: 0.414ms (6 tokens)
+  STL Regex: 14.578ms (6 tokens)
+  Speedup:   35.2x
+
+Test 9: "I'll see you there, won't I?"
+  Generated: 0.606ms (8 tokens)
+  STL Regex: 17.137ms (8 tokens)
+  Speedup:   28.3x
+
+Test 10: "We've been waiting, but they haven't arr..."
+  Generated: 0.706ms (10 tokens)
+  STL Regex: 25.142ms (10 tokens)
+  Speedup:   35.6x
+
+Test 11: "You'd better go now, or you'll be late."
+  Generated: 0.694ms (10 tokens)
+  STL Regex: 21.551ms (10 tokens)
+  Speedup:   31.0x
+
+Test 12: "She'd've come if she could, but she coul..."
+  Generated: 0.725ms (11 tokens)
+  STL Regex: 24.991ms (11 tokens)
+  Speedup:   34.5x
+
+Test 13: "\"Hello,\" she said, \"how are you?\""
+  Generated: 0.668ms (10 tokens)
+  STL Regex: 20.120ms (10 tokens)
+  Speedup:   30.1x
+
+Test 14: "WaitΓÇöwhat did you say?!"
+  Generated: 0.423ms (6 tokens)
+  STL Regex: 15.430ms (7 tokens)
+  Speedup:   36.5x
+
+Test 15: "The items were: apples, oranges, and ban..."
+  Generated: 0.777ms (11 tokens)
+  STL Regex: 26.515ms (11 tokens)
+  Speedup:   34.1x
+
+Test 16: "He asked, \"Are you sure about this?\""
+  Generated: 0.669ms (10 tokens)
+  STL Regex: 21.763ms (10 tokens)
+  Speedup:   32.5x
+
+Test 17: "The quick brown fox jumps over the lazy ..."
+  Generated: 1.267ms (22 tokens)
+  STL Regex: 57.573ms (22 tokens)
+  Speedup:   45.4x
+
+Test 18: "I can't believe it's already December! W..."
+  Generated: 1.538ms (26 tokens)
+  STL Regex: 65.142ms (26 tokens)
+  Speedup:   42.3x
+
+Test 19: "The morning sun cast long shadows across..."
+  Generated: 2.204ms (43 tokens)
+  STL Regex: 107.992ms (44 tokens)
+  Speedup:   49.0x
+
+Test 20: "\"I'm not sure I understand,\" she said,..."
+  Generated: 2.583ms (44 tokens)
+  STL Regex: 99.908ms (45 tokens)
+  Speedup:   38.7x
+
+Test 21: "The professor cleared his throat. \"Toda..."
+  Generated: 2.754ms (46 tokens)
+  STL Regex: 116.911ms (47 tokens)
+  Speedup:   42.4x
+
+Test 22: "In the year 2024, technology had advance..."
+  Generated: 4.382ms (80 tokens)
+  STL Regex: 209.104ms (80 tokens)
+  Speedup:   47.7x
+
+Test 23: "Dr. Smith went to St. Louis at 3:00 p.m...."
+  Generated: 3.019ms (55 tokens)
+  STL Regex: 112.881ms (55 tokens)
+  Speedup:   37.4x
+
+Test 24: "It was the best of times, it was the wor..."
+  Generated: 6.806ms (145 tokens)
+  STL Regex: 336.686ms (146 tokens)
+  Speedup:   49.5x
+
+Test 25: "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA..."
+  Generated: 110.439ms (1 tokens)
+  STL Regex: 4748.881ms (1 tokens)
+  Speedup:   43.0x
+
+=== Summary ===
+Total Generated: 142.776ms
+Total STL:       6111.394ms
+Average Speedup: 36.9x
+
 
 ============================================================
 Benchmark: gpt2
@@ -17,9 +422,9 @@ Build successful
 ============================================================
 BENCHMARK SUMMARY: gpt2
 ============================================================
-Total Generated C++ time: 73.640ms
-Total STL Regex time:     925.728ms
-Average speedup:          20.7x
+Total Generated C++ time: 69.163ms
+Total STL Regex time:     938.364ms
+Average speedup:          20.6x
 Token mismatches:         8 (STL pattern may differ from PCRE)
 
 ============================================================
@@ -40,9 +445,9 @@ Build successful
 ============================================================
 BENCHMARK SUMMARY: llama3
 ============================================================
-Total Generated C++ time: 69.754ms
-Total STL Regex time:     1473.822ms
-Average speedup:          38.1x
+Total Generated C++ time: 71.617ms
+Total STL Regex time:     1475.938ms
+Average speedup:          37.8x
 Token mismatches:         24 (STL pattern may differ from PCRE)
 
 ============================================================
@@ -63,9 +468,9 @@ Build successful
 ============================================================
 BENCHMARK SUMMARY: gpt4o
 ============================================================
-Total Generated C++ time: 144.192ms
-Total STL Regex time:     5812.643ms
-Average speedup:          34.8x
+Total Generated C++ time: 142.776ms
+Total STL Regex time:     6111.394ms
+Average speedup:          36.9x
 Token mismatches:         5 (STL pattern may differ from PCRE)
 
 ============================================================
