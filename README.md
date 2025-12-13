@@ -28,8 +28,15 @@ python pcre_to_cpp.py \
 ## Running Tests
 
 ```bash
-python run_tests.py -c tests.yaml -v
-python run_tests.py -c tests.yaml -v -n pattern_name  # run specific test
+python test.py -c tests.yaml -v
+python test.py -c tests.yaml -v -n pattern_name  # run specific test
+```
+
+## Running Benchmarks
+
+```bash
+python benchmark.py -c benchmarks.yaml -v
+python benchmark.py -c benchmarks.yaml -v -n benchmark_name  # run specific benchmark
 ```
 
 ## Documentation
