@@ -791,24 +791,61 @@ class CppEmitter:
         self._emit("}")
 
     def _unicode_cat_condition(self, node: UnicodeCategory, cpt_var: str, flags_var: str) -> str:
-        """Generate condition for Unicode category."""
+        """Generate condition for Unicode category.
+
+        Unicode General Categories:
+        - L  = Letter (Lu | Ll | Lt | Lm | Lo)
+        - Lu = Uppercase Letter
+        - Ll = Lowercase Letter
+        - Lt = Titlecase Letter (rare, e.g., Dž)
+        - Lm = Modifier Letter (e.g., ʰ ʱ)
+        - Lo = Other Letter (e.g., Chinese, Hebrew, Arabic)
+        - M  = Mark (Mn | Mc | Me) - combining marks/accents
+        - N  = Number (Nd | Nl | No)
+        - P  = Punctuation
+        - S  = Symbol
+        - Z  = Separator (Zs | Zl | Zp)
+        - C  = Other (control, format, etc.)
+
+        Script categories:
+        - Han = CJK ideographs
+        """
         cat = node.category
         negated = node.negated
 
         # Map category to flag check
+        # Based on unicode_cpt_flags from unicode.h:
+        #   is_letter, is_number, is_punctuation, is_symbol, is_accent_mark
+        #   is_separator, is_control, is_whitespace, is_uppercase, is_lowercase
         cat_map = {
+            # Major categories
             "L": f"{flags_var}.is_letter",
             "N": f"{flags_var}.is_number",
             "P": f"{flags_var}.is_punctuation",
             "S": f"{flags_var}.is_symbol",
             "M": f"{flags_var}.is_accent_mark",
-            "Z": f"{flags_var}.is_whitespace",
+            "Z": f"{flags_var}.is_separator",
+            "C": f"{flags_var}.is_control",
+
+            # Letter subcategories
+            "Lu": f"({flags_var}.is_letter && {flags_var}.is_uppercase)",
+            "Ll": f"({flags_var}.is_letter && {flags_var}.is_lowercase)",
+            "Lt": f"({flags_var}.is_letter && {flags_var}.is_uppercase)",  # Titlecase approximated as uppercase
+            "Lm": f"({flags_var}.is_letter && !{flags_var}.is_uppercase && !{flags_var}.is_lowercase)",  # Modifier letters
+            "Lo": f"({flags_var}.is_letter && !{flags_var}.is_uppercase && !{flags_var}.is_lowercase)",  # Other letters (CJK, etc.)
+
+            # Number subcategories (approximations - all map to is_number)
+            "Nd": f"{flags_var}.is_number",  # Decimal digit
+            "Nl": f"{flags_var}.is_number",  # Letter number (e.g., Roman numerals)
+            "No": f"{flags_var}.is_number",  # Other number
+
+            # Mark subcategories (all map to is_accent_mark)
+            "Mn": f"{flags_var}.is_accent_mark",  # Non-spacing mark
+            "Mc": f"{flags_var}.is_accent_mark",  # Spacing combining mark
+            "Me": f"{flags_var}.is_accent_mark",  # Enclosing mark
+
+            # Script-specific
             "Han": f"unicode_cpt_is_han({cpt_var})",
-            "Lu": f"{flags_var}.is_uppercase",
-            "Ll": f"{flags_var}.is_lowercase",
-            "Lt": f"{flags_var}.is_uppercase",  # Title case treated as uppercase
-            "Lm": f"{flags_var}.is_letter",  # Modifier letter
-            "Lo": f"{flags_var}.is_letter",  # Other letter
         }
 
         self.required_helpers.add(cat)
@@ -816,7 +853,7 @@ class CppEmitter:
         if cat in cat_map:
             cond = cat_map[cat]
         else:
-            # Unknown category - generate a placeholder
+            # Unknown category - generate a helper function call
             cond = f"unicode_cpt_is_{cat.lower()}({cpt_var})"
             self.required_helpers.add(f"unicode_cpt_is_{cat.lower()}")
 
