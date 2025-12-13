@@ -14,21 +14,24 @@ This tool converts PCRE (Perl Compatible Regular Expressions) patterns into stan
 ## Architecture
 
 ```
-┌─────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│  PCRE Pattern   │ ──► │  Recursive       │ ──► │      AST        │
-│    (string)     │     │  Descent Parser  │     │   (Python)      │
-└─────────────────┘     └──────────────────┘     └────────┬────────┘
-                                                          │
-                                                          ▼
-                                                 ┌────────────────┐
-                                                 │  C++ Emitter   │
-                                                 └────────┬───────┘
-                                                          │
-                                                          ▼
-                                                 ┌────────────────┐
-                                                 │  C++ Function  │
-                                                 │  (iterative)   │
-                                                 └────────────────┘
+┌─────────────────┐     ┌────────────────────────────┐     ┌────────────────┐
+│  PCRE Pattern   │ ──► │  Recursive Descent Parser  │ ──► │       AST      │
+└─────────────────┘     └────────────────────────────┘     └────────┬───────┘
+                                                                    │
+                                                                    ▼
+                                                           ┌────────────────┐
+                                                           │  AST Optimizer │
+                                                           └────────┬───────┘
+                                                                    │
+                                                                    ▼
+                                                           ┌────────────────┐
+                                                           │  C++ Emitter   │
+                                                           └────────┬───────┘
+                                                                    │
+                                                                    ▼
+                                                           ┌────────────────┐
+                                                           │  C++ Function  │
+                                                           └────────────────┘
 ```
 
 ## Parser Design
@@ -70,6 +73,74 @@ GroupNode(child, flags)     # Groups: (...), (?:...), (?i:...)
 Lookahead(child, positive)  # Lookahead: (?=...), (?!...)
 Anchor(type)                # Anchors: ^, $
 ```
+
+## AST Optimizer
+
+After parsing, the AST goes through an optimization phase that simplifies and improves the tree structure. The optimizer runs until a fixed point is reached (no more changes).
+
+### Optimization Passes
+
+#### 1. Sequence Flattening
+
+Nested sequences are flattened and trivial groups are unwrapped:
+
+```
+Seq([Seq([a, b]), c])  →  Seq([a, b, c])
+Group(child, non-capturing, no-flags)  →  child
+```
+
+This removes unnecessary nesting from the AST and simplifies code generation.
+
+#### 2. Alternation to CharClass
+
+Single-character alternations are converted to character classes:
+
+```
+a|b|c  →  [abc]
+\r|\n|\t  →  [\r\n\t]
+```
+
+This produces more efficient matching code since character class checks can be combined into a single condition.
+
+#### 3. Common Prefix Extraction
+
+Common prefixes are factored out from alternations:
+
+```
+abc|abd  →  ab(c|d)
+foo|foobar|foobaz  →  foo(|bar|baz)
+```
+
+This avoids redundant matching of shared prefixes across alternatives.
+
+### Implementation Details
+
+The optimizer uses a recursive transformation approach:
+
+1. **Bottom-up transformation**: Children are transformed before parents
+2. **Fixed-point iteration**: Transformations run until the AST stops changing
+3. **Deep equality checking**: Uses `nodes_equal()` to detect when optimization is complete
+
+```python
+def optimize(self, ast: Node) -> Node:
+    prev = None
+    current = ast
+    while not self._ast_equal(prev, current):
+        prev = current
+        current = self._transform(current)
+    return current
+```
+
+### Example
+
+Input pattern: `'s|'t|'re|'ve|'m|'ll|'d`
+
+After optimization:
+```
+'(s|t|re|ve|m|ll|d)
+```
+
+The common `'` prefix is extracted, reducing redundant character comparisons.
 
 ## Supported PCRE Features
 
@@ -490,10 +561,11 @@ if (matched && unicode_tolower(_get_cpt(match_pos)) == 's') {
 3. **Stack-safe**: All backtracking uses a single pre-allocated vector, not call stack recursion
 4. **Memory-efficient**: Single `bt_stack` per function call, pre-sized to `2 * input_length`
 5. **Zero per-quantifier allocations**: Uses base index tracking instead of separate vectors
+6. **AST optimization**: Fixed-point optimizer with sequence flattening, alternation-to-charclass conversion, and common prefix extraction
 
 ### Potential Improvements
 
-1. **Optimization**: Combine adjacent literal matches into string comparisons
+1. **String comparison**: Combine adjacent literal matches into string comparisons
 2. **DFA compilation**: Convert simple patterns to state machines
 3. **More scripts**: Add `\p{Hiragana}`, `\p{Katakana}`, etc.
 4. **Lookbehind**: Could be added for fixed-width patterns
