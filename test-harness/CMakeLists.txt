@@ -19,3 +19,16 @@ target_include_directories(regex_test PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor
 )
+
+# Benchmark executable for comparing generated code vs STL regex
+add_executable(benchmark
+    benchmark.cpp
+    unicode.cpp
+    unicode-data.cpp
+    ${PATTERN_FILE}
+)
+
+target_include_directories(benchmark PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}
+    ${CMAKE_CURRENT_SOURCE_DIR}/vendor
+)

@@ -1,0 +1,29 @@
+# Benchmark configuration for PCRE-to-C++ vs STL regex comparison
+# Each benchmark defines:
+#   - pcre_pattern: The full PCRE pattern (for C++ code generation)
+#   - stl_pattern: The STL regex approximation (ECMAScript compatible)
+#   - inputs: Test input files from test-harness/inputs/
+
+# GPT-2 style tokenizer
+- name: gpt2
+  pcre_pattern: "'s|'t|'re|'ve|'m|'ll|'d| ?\\p{L}+| ?\\p{N}+| ?[^\\s\\p{L}\\p{N}]+|\\s+(?!\\S)"
+  # STL approximation: Unicode property classes replaced with ASCII
+  stl_pattern: "'s|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^\\s A-Za-z0-9]+|\\s+(?!\\S)"
+  inputs:
+    - natural_language
+
+# Llama3 style tokenizer
+- name: llama3
+  pcre_pattern: "(?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\\r\\n\\p{L}\\p{N}]?\\p{L}+|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  # STL approximation: case-insensitive group expanded, Unicode replaced
+  stl_pattern: "(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])|[^\\r\\n A-Za-z0-9]?[A-Za-z]+|[0-9]{1,3}| ?[^\\s A-Za-z0-9]+[\\r\\n]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  inputs:
+    - natural_language
+
+# GPT-4o style tokenizer
+- name: gpt4o
+  pcre_pattern: "[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]*[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]+(?i:'s|'t|'re|'ve|'m|'ll|'d)?|[^\\r\\n\\p{L}\\p{N}]?[\\p{Lu}\\p{Lt}\\p{Lm}\\p{Lo}\\p{M}]+[\\p{Ll}\\p{Lm}\\p{Lo}\\p{M}]*(?i:'s|'t|'re|'ve|'m|'ll|'d)?|\\p{N}{1,3}| ?[^\\s\\p{L}\\p{N}]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  # STL approximation: Unicode properties replaced with ASCII, CamelCase approximation
+  stl_pattern: "[^\\r\\nA-Za-z0-9]?[A-Z]*[a-z]+(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[^\\r\\nA-Za-z0-9]?[A-Z]+[a-z]*(?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]|'[dD])?|[0-9]{1,3}| ?[^\\sA-Za-z0-9]+[\\r\\n/]*|\\s*[\\r\\n]+|\\s+(?!\\S)|\\s+"
+  inputs:
+    - natural_language
