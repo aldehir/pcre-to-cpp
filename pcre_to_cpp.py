@@ -521,6 +521,7 @@ class CppEmitter:
         self.lines = []
         self.temp_counter = 0
         self.required_helpers = set()
+        self.uses_backtracking = False  # Set by _ast_needs_backtracking()
 
     # =========================================================================
     # Emit Infrastructure
@@ -570,6 +571,7 @@ class CppEmitter:
         """Generate C++ code for the given AST."""
         self.lines = []
         self.required_helpers = set()
+        self.uses_backtracking = self._ast_needs_backtracking(ast)
         func_name = self.function_name
 
         self._emit_block('''
@@ -595,9 +597,17 @@ class CppEmitter:
                 bpe_offsets.reserve(offsets.size());
 
                 const auto cpts = unicode_cpts_from_utf8(text);
-
-                size_t start = 0;
             ''')
+
+            # Emit shared backtracking stack if needed
+            if self.uses_backtracking:
+                self._emit("")
+                self._emit("// Pre-allocated backtracking stack")
+                self._emit("std::vector<size_t> bt_stack;")
+                self._emit("bt_stack.reserve(cpts.size() * 2);")
+
+            self._emit("")
+            self._emit("size_t start = 0;")
 
             with self._block("for (auto offset : offsets) {"):
                 self._emit_block('''
@@ -1047,6 +1057,22 @@ class CppEmitter:
             else:
                 self._emit("matched = save_matched && !lookahead_success;")
 
+    def _ast_needs_backtracking(self, ast: Node) -> bool:
+        """Pre-scan AST to determine if any part needs backtracking.
+
+        Used to decide whether to emit the shared bt_stack declaration.
+        """
+        if isinstance(ast, Alternation):
+            return any(self._ast_needs_backtracking(alt) for alt in ast.alternatives)
+        elif isinstance(ast, Sequence):
+            return self._needs_backtracking(ast.children)
+        elif isinstance(ast, GroupNode):
+            return self._ast_needs_backtracking(ast.child)
+        elif isinstance(ast, Quantifier):
+            # A lone quantifier doesn't need backtracking unless inside a sequence
+            return False
+        return False
+
     def _contains_quantifier(self, node: Node) -> bool:
         """Check if a node or its children contain quantifiers."""
         if isinstance(node, Quantifier):
@@ -1096,9 +1122,10 @@ class CppEmitter:
                 self._generate_node_match(child, case_insensitive)
 
     def _generate_sequence_with_backtracking(self, children: list, case_insensitive: bool = False):
-        """Generate sequence matching with full backtracking support.
+        """Generate sequence matching with stack-based backtracking.
 
-        Strategy: For each quantifier, collect ALL possible match positions.
+        Strategy: Use shared bt_stack with base index tracking.
+        For each quantifier, collect ALL possible match positions into bt_stack.
         Use nested loops to try all combinations, longest first (greedy).
         """
         quantifier_indices = []
@@ -1115,55 +1142,64 @@ class CppEmitter:
         if len(children) > 5:
             pattern_str += "..."
 
-        label = self._temp_var("seq_done")
         num_quants = len(quantifier_indices)
 
         self._emit(f"// Sequence with backtracking ({num_quants} quantifiers): {pattern_str}")
         with self._block():
             self._emit("bool seq_matched = false;")
+            self._emit("size_t bt_base = bt_stack.size();  // Save stack state")
             self._emit("")
 
             # Generate elements before first quantifier
             first_quant_idx = quantifier_indices[0]
             for i in range(first_quant_idx):
                 self._generate_node_match(children[i], case_insensitive)
-                self._emit(f"if (!matched) goto {label};")
-                self._emit("")
+                self._emit("if (!matched) { bt_stack.resize(bt_base); }")
+                self._emit("else {")
+                self.indent_level += 1
 
-            # Generate nested backtracking loops for each quantifier
-            self._generate_multi_quantifier_loops(
+            # Generate stack-based backtracking loops for each quantifier
+            self._generate_stack_based_backtracking(
                 children, quantifier_indices, 0, case_insensitive
             )
 
+            # Close the nested if-else blocks
+            for i in range(first_quant_idx):
+                self.indent_level -= 1
+                self._emit("}")
+
             self._emit("")
-            self._emit(f"{label}:")
+            self._emit("bt_stack.resize(bt_base);  // Restore stack state")
             self._emit("matched = seq_matched;")
 
-    def _generate_multi_quantifier_loops(self, children: list, quant_indices: list,
-                                          quant_num: int, case_insensitive: bool):
-        """Generate nested loops for multiple quantifiers.
+    def _generate_stack_based_backtracking(self, children: list, quant_indices: list,
+                                            quant_num: int, case_insensitive: bool):
+        """Generate stack-based nested loops for multiple quantifiers.
 
+        Uses shared bt_stack with base index tracking instead of per-quantifier vectors.
         For each quantifier, we:
-        1. Collect all possible match positions
-        2. Loop from longest to shortest
+        1. Collect all possible match positions into bt_stack
+        2. Loop from longest to shortest using base + index
         3. Inside the loop, either recurse to next quantifier or try remaining pattern
         """
         quant_idx = quant_indices[quant_num]
         quant = children[quant_idx]
         min_c = quant.min_count
         max_c = quant.max_count
-        var_name = f"q{quant_num}_pos"
+        base_name = f"q{quant_num}_base"
+        count_name = f"q{quant_num}_count"
         quant_pattern = self._ast_to_pattern(quant)
 
-        # Collect positions for this quantifier
+        # Collect positions for this quantifier using shared stack
         self._emit(f"// Quantifier {quant_num}: {quant_pattern}")
-        self._emit_block('''
-            std::vector<size_t> $var_name;
-            $var_name.push_back(match_pos);
-        ''', locals())
+        self._emit(f"size_t {base_name} = bt_stack.size();")
+        self._emit("bt_stack.push_back(match_pos);")
 
         with self._block():
-            loop_cond = "while (true) {" if max_c == -1 else f"while ({var_name}.size() <= {max_c}) {{"
+            if max_c == -1:
+                loop_cond = "while (true) {"
+            else:
+                loop_cond = f"while (bt_stack.size() - {base_name} <= {max_c}) {{"
             with self._block(loop_cond):
                 self._emit_block('''
                     size_t save_pos = match_pos;
@@ -1172,21 +1208,20 @@ class CppEmitter:
                 self._generate_node_match(quant.child, case_insensitive)
                 self._emit_block('''
                     if (matched && match_pos > save_pos) {
-                        $var_name.push_back(match_pos);
+                        bt_stack.push_back(match_pos);
                     } else {
                         match_pos = save_pos;
                         break;
                     }
-                ''', locals())
+                ''')
+        self._emit(f"size_t {count_name} = bt_stack.size() - {base_name};")
         self._emit("")
 
         # Loop through positions from longest to shortest
-        self._emit(f"// Try quantifier {quant_num} positions (need > {min_c} for min_count={min_c})")
-        with self._block(f"for (size_t i{quant_num} = {var_name}.size(); i{quant_num} > {min_c}; i{quant_num}--) {{"):
-            self._emit_block('''
-                match_pos = $var_name[i$quant_num - 1];
-                matched = true;
-            ''', locals())
+        self._emit(f"// Try quantifier {quant_num} positions (min_count={min_c})")
+        with self._block(f"for (size_t i{quant_num} = {count_name}; i{quant_num} > {min_c}; i{quant_num}--) {{"):
+            self._emit(f"match_pos = bt_stack[{base_name} + i{quant_num} - 1];")
+            self._emit("matched = true;")
 
             # Find elements between this quantifier and the next (or end)
             next_quant_idx = quant_indices[quant_num + 1] if quant_num + 1 < len(quant_indices) else len(children)
@@ -1199,9 +1234,12 @@ class CppEmitter:
 
             # Either recurse to next quantifier or finish
             if quant_num + 1 < len(quant_indices):
-                self._generate_multi_quantifier_loops(
+                self._generate_stack_based_backtracking(
                     children, quant_indices, quant_num + 1, case_insensitive
                 )
+                # Truncate nested quantifier's positions before trying next outer position
+                next_base = f"q{quant_num + 1}_base"
+                self._emit(f"bt_stack.resize({next_base});")
                 self._emit("if (seq_matched) break;")
             else:
                 for i in range(next_quant_idx, len(children)):
@@ -1210,224 +1248,6 @@ class CppEmitter:
                         self._emit("if (!matched) continue;")
                         self._emit("")
                 self._emit("if (matched) { seq_matched = true; break; }")
-
-    def _generate_quantifier_with_bt_collection(self, node: Quantifier, case_insensitive: bool = False):
-        """Generate quantifier match that collects positions for backtracking."""
-        min_c = node.min_count
-        max_c = node.max_count
-        child = node.child
-        quant_pattern = self._ast_to_pattern(node)
-
-        self._emit(f"// Quantifier (bt): {quant_pattern}")
-        with self._block():
-            self._emit_block('''
-                bt_stack.emplace_back();
-                auto& bt = bt_stack.back();
-                bt.positions.push_back(match_pos);
-            ''')
-
-            loop_cond = "while (matched) {" if max_c == -1 else f"while (matched && bt.positions.size() <= {max_c}) {{"
-            with self._block(loop_cond):
-                self._emit("size_t save_pos = match_pos;")
-                self._generate_node_match(child, case_insensitive)
-                self._emit_block('''
-                    if (matched && match_pos > save_pos) {
-                        bt.positions.push_back(match_pos);
-                    } else {
-                        match_pos = save_pos;
-                        matched = true;
-                        break;
-                    }
-                ''')
-            self._emit("")
-
-            self._emit(f"// Check minimum count: need {min_c} matches")
-            self._emit_block('''
-                if (bt.positions.size() <= $min_c) {
-                    matched = false;
-                }
-            ''', locals())
-
-    def _generate_quantifier_with_lookahead(self, quant: Quantifier, lookahead: Lookahead, case_insensitive: bool = False):
-        """Generate quantifier match with backtracking support for following lookahead."""
-        min_c = quant.min_count
-        max_c = quant.max_count
-        child = quant.child
-        quant_pattern = self._ast_to_pattern(quant)
-        la_pattern = self._ast_to_pattern(lookahead)
-
-        self._emit(f"// Quantifier with lookahead backtracking: {quant_pattern}{la_pattern}")
-        with self._block():
-            self._emit_block('''
-                std::vector<size_t> bt_positions;
-                bt_positions.push_back(match_pos);
-            ''')
-
-            # Greedy phase
-            if max_c == -1:
-                self._emit("// Greedy phase - match as many as possible")
-                loop_cond = "while (matched) {"
-            else:
-                self._emit(f"// Greedy phase - match up to {max_c}")
-                loop_cond = f"while (matched && bt_positions.size() <= {max_c}) {{"
-
-            with self._block(loop_cond):
-                self._emit("size_t save_pos = match_pos;")
-                self._generate_node_match(child, case_insensitive)
-                self._emit_block('''
-                    if (matched && match_pos > save_pos) {
-                        bt_positions.push_back(match_pos);
-                    } else {
-                        match_pos = save_pos;
-                        matched = true;
-                        break;
-                    }
-                ''')
-            self._emit("")
-
-            # Backtracking phase
-            self._emit("// Backtracking phase - try positions until lookahead succeeds")
-            self._emit("matched = false;")
-            with self._block(f"while (bt_positions.size() > {min_c}) {{"):
-                self._emit("match_pos = bt_positions.back();")
-                self._emit("")
-
-                self._emit("// Test lookahead")
-                with self._block():
-                    self._emit_block('''
-                        size_t la_save = match_pos;
-                        bool la_matched = true;
-                    ''')
-                    self._generate_lookahead_test(lookahead.child, case_insensitive)
-                    self._emit_block('''
-                        bool lookahead_success = la_matched;
-                        match_pos = la_save;
-                    ''')
-
-                    la_check = "if (lookahead_success) {" if lookahead.positive else "if (!lookahead_success) {"
-                    with self._block(la_check):
-                        self._emit("matched = true;")
-                self._emit("")
-
-                self._emit_block('''
-                    if (matched) break;
-                    bt_positions.pop_back();
-                ''')
-
-    def _generate_lookahead_test(self, node: Node, case_insensitive: bool = False):
-        """Generate lookahead test code using la_matched instead of matched."""
-        if isinstance(node, LiteralChar):
-            char_code = ord(node.char)
-            if case_insensitive and node.char.isalpha():
-                char_lower = ord(node.char.lower())
-                self._emit_block('''
-                    if (la_matched && unicode_tolower(_get_cpt(match_pos)) == $char_lower) match_pos++;
-                    else la_matched = false;
-                ''', locals())
-            else:
-                self._emit_block('''
-                    if (la_matched && _get_cpt(match_pos) == $char_code) match_pos++;
-                    else la_matched = false;
-                ''', locals())
-
-        elif isinstance(node, Predefined):
-            var = self._temp_var("la_cpt")
-            flags_var = f"flags_{var}"
-            cond = self._predefined_condition(node, var, flags_var)
-            with self._block("if (la_matched) {"):
-                self._emit_block('''
-                    uint32_t $var = _get_cpt(match_pos);
-                    auto $flags_var = _get_flags(match_pos);
-                    if ($cond) match_pos++;
-                    else la_matched = false;
-                ''', locals())
-
-        elif isinstance(node, UnicodeCategory):
-            var = self._temp_var("la_cpt")
-            flags_var = f"flags_{var}"
-            cond = self._unicode_cat_condition(node, var, flags_var)
-            with self._block("if (la_matched) {"):
-                self._emit_block('''
-                    uint32_t $var = _get_cpt(match_pos);
-                    auto $flags_var = _get_flags(match_pos);
-                    if ($cond) match_pos++;
-                    else la_matched = false;
-                ''', locals())
-
-        elif isinstance(node, SpecialChar):
-            char_code = ord(node.char)
-            self._emit_block('''
-                if (la_matched && _get_cpt(match_pos) == $char_code) match_pos++;
-                else la_matched = false;
-            ''', locals())
-
-        elif isinstance(node, AnyChar):
-            self._emit_block('''
-                if (la_matched && _get_cpt(match_pos) != OUT_OF_RANGE) match_pos++;
-                else la_matched = false;
-            ''')
-
-        elif isinstance(node, CharClass):
-            var = self._temp_var("la_cpt")
-            flags_var = f"flags_{var}"
-
-            with self._block("if (la_matched) {"):
-                self._emit(f"uint32_t {var} = _get_cpt(match_pos);")
-                self._emit(f"auto {flags_var} = _get_flags(match_pos);")
-
-                conditions = []
-                for item in node.items:
-                    if isinstance(item, tuple):
-                        start, end = item
-                        conditions.append(f"({var} >= {ord(start)} && {var} <= {ord(end)})")
-                    elif isinstance(item, LiteralChar):
-                        conditions.append(f"({var} == {ord(item.char)})")
-                    elif isinstance(item, SpecialChar):
-                        conditions.append(f"({var} == {ord(item.char)})")
-                    elif isinstance(item, UnicodeCategory):
-                        cond = self._unicode_cat_condition(item, var, flags_var)
-                        conditions.append(f"({cond})")
-                    elif isinstance(item, Predefined):
-                        cond = self._predefined_condition(item, var, flags_var)
-                        conditions.append(f"({cond})")
-
-                if conditions:
-                    cond_str = " || ".join(conditions)
-                    if node.negated:
-                        self._emit_block('''
-                            bool in_class = $cond_str;
-                            if (!in_class && $var != OUT_OF_RANGE) match_pos++;
-                            else la_matched = false;
-                        ''', locals())
-                    else:
-                        self._emit_block('''
-                            if ($cond_str) match_pos++;
-                            else la_matched = false;
-                        ''', locals())
-                else:
-                    self._emit("la_matched = false;")
-
-        elif isinstance(node, Sequence):
-            for child in node.children:
-                self._generate_lookahead_test(child, case_insensitive)
-
-        elif isinstance(node, Quantifier):
-            min_count = node.min_count
-            max_count = node.max_count
-            self._emit("// Quantifier in lookahead")
-            with self._block():
-                self._emit("size_t la_count = 0;")
-                loop_cond = "while (la_matched) {" if max_count == -1 else f"while (la_matched && la_count < {max_count}) {{"
-                with self._block(loop_cond):
-                    self._emit("size_t la_save = match_pos;")
-                    self._generate_lookahead_test(node.child, case_insensitive)
-                    self._emit("if (la_matched) la_count++;")
-                    self._emit("else { match_pos = la_save; la_matched = true; break; }")
-                self._emit(f"if (la_count < {min_count}) la_matched = false;")
-
-        else:
-            self._emit(f"// Unsupported node type in lookahead: {type(node).__name__}")
-            self._emit("la_matched = false;")
 
     def _generate_nested_alternation(self, node: Alternation, case_insensitive: bool = False):
         """Generate nested alternation (within a sequence)."""

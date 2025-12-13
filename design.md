@@ -189,6 +189,10 @@ static std::vector<size_t> unicode_regex_split_NAME(...) {
     std::vector<size_t> bpe_offsets;
     const auto cpts = unicode_cpts_from_utf8(text);
 
+    // Pre-allocated backtracking stack (only if pattern needs backtracking)
+    std::vector<size_t> bt_stack;
+    bt_stack.reserve(cpts.size() * 2);
+
     size_t start = 0;
     for (auto offset : offsets) {
         const size_t offset_ini = start;
@@ -342,16 +346,17 @@ When a quantifier is followed by a lookahead, literal, or another quantifier, th
 3. Must backtrack: `\s+` gives up one space
 4. `(?!\S)` checks next char - it's ` ` (whitespace) → succeeds!
 
-**Strategy:** Collect all possible match positions upfront, then try from longest to shortest:
+**Strategy:** Use a shared pre-allocated stack with base index tracking. Collect all possible match positions into `bt_stack`, then try from longest to shortest:
 
 ```cpp
 // Sequence with backtracking: \s+(?!\S)
 {
     bool seq_matched = false;
+    size_t bt_base = bt_stack.size();  // Save stack state
 
-    // Collect all positions for \s+
-    std::vector<size_t> q0_pos;
-    q0_pos.push_back(match_pos);
+    // Collect all positions for \s+ into shared stack
+    size_t q0_base = bt_stack.size();
+    bt_stack.push_back(match_pos);
     while (true) {
         size_t save_pos = match_pos;
         // Try to match \s
@@ -359,16 +364,17 @@ When a quantifier is followed by a lookahead, literal, or another quantifier, th
         else { matched = false; }
 
         if (matched && match_pos > save_pos) {
-            q0_pos.push_back(match_pos);
+            bt_stack.push_back(match_pos);
         } else {
             match_pos = save_pos;
             break;
         }
     }
+    size_t q0_count = bt_stack.size() - q0_base;
 
     // Try positions from longest to shortest
-    for (size_t i0 = q0_pos.size(); i0 > 1; i0--) {  // >1 for min_count=1
-        match_pos = q0_pos[i0 - 1];
+    for (size_t i0 = q0_count; i0 > 1; i0--) {  // >1 for min_count=1
+        match_pos = bt_stack[q0_base + i0 - 1];
         matched = true;
 
         // Test lookahead (?!\S)
@@ -377,46 +383,60 @@ When a quantifier is followed by a lookahead, literal, or another quantifier, th
         if (matched) { seq_matched = true; break; }
     }
 
+    bt_stack.resize(bt_base);  // Restore stack state (O(1), no deallocation)
     matched = seq_matched;
 }
 ```
 
 ### Multi-Quantifier Backtracking
 
-For patterns with multiple quantifiers like `\s*[\r\n]+`, nested loops handle all combinations:
+For patterns with multiple quantifiers like `\s*[\r\n]+`, nested loops handle all combinations using the shared stack:
 
 ```cpp
 // Sequence with backtracking (2 quantifiers): \s*[\r\n]+
 {
     bool seq_matched = false;
+    size_t bt_base = bt_stack.size();
 
-    // Collect positions for \s*
-    std::vector<size_t> q0_pos;
-    // ... collect all positions ...
+    // Collect positions for \s* into shared stack
+    size_t q0_base = bt_stack.size();
+    bt_stack.push_back(match_pos);
+    // ... collect all positions into bt_stack ...
+    size_t q0_count = bt_stack.size() - q0_base;
 
     // Try q0 positions (outer loop)
-    for (size_t i0 = q0_pos.size(); i0 > 0; i0--) {  // >0 for min_count=0
-        match_pos = q0_pos[i0 - 1];
+    for (size_t i0 = q0_count; i0 > 0; i0--) {  // >0 for min_count=0
+        match_pos = bt_stack[q0_base + i0 - 1];
 
         // Collect positions for [\r\n]+ from this point
-        std::vector<size_t> q1_pos;
-        // ... collect positions starting from current q0 position ...
+        size_t q1_base = bt_stack.size();
+        bt_stack.push_back(match_pos);
+        // ... collect positions into bt_stack ...
+        size_t q1_count = bt_stack.size() - q1_base;
 
         // Try q1 positions (inner loop)
-        for (size_t i1 = q1_pos.size(); i1 > 1; i1--) {  // >1 for min_count=1
-            match_pos = q1_pos[i1 - 1];
+        for (size_t i1 = q1_count; i1 > 1; i1--) {  // >1 for min_count=1
+            match_pos = bt_stack[q1_base + i1 - 1];
             matched = true;
 
             if (matched) { seq_matched = true; break; }
         }
+        bt_stack.resize(q1_base);  // Clean up q1's positions
         if (seq_matched) break;
     }
 
+    bt_stack.resize(bt_base);  // Restore stack state
     matched = seq_matched;
 }
 ```
 
 This ensures patterns like `\s*[\r\n]+` correctly match `\n\n` by backtracking `\s*` to let `[\r\n]+` consume the newlines.
+
+**Benefits of shared stack approach:**
+- **One allocation** per function call instead of per-quantifier
+- **No nested allocations** inside backtracking loops
+- **O(1) cleanup** via `resize()` (truncates without deallocating)
+- **Cache-friendly** memory access pattern
 
 ### Lookahead
 
@@ -467,7 +487,9 @@ if (matched && unicode_tolower(_get_cpt(match_pos)) == 's') {
 
 1. **Iterative backtracking**: Full support for quantifiers followed by lookaheads or other patterns
 2. **Multi-quantifier backtracking**: Nested loops for patterns like `\s*[\r\n]+`
-3. **Stack-safe**: All backtracking uses explicit vectors, not call stack recursion
+3. **Stack-safe**: All backtracking uses a single pre-allocated vector, not call stack recursion
+4. **Memory-efficient**: Single `bt_stack` per function call, pre-sized to `2 * input_length`
+5. **Zero per-quantifier allocations**: Uses base index tracking instead of separate vectors
 
 ### Potential Improvements
 
@@ -484,16 +506,14 @@ pcre-to-cpp/
 ├── pcre_to_cpp.py      # Main converter script
 ├── design.md           # This document
 ├── run_tests.py        # Test runner script
-├── tests.json          # Test patterns and expected inputs
-├── examples/
-│   ├── unicode.cpp     # Reference implementation with helpers
-│   ├── unicode.h       # Header with unicode_cpt_flags
-│   └── tokenizers.cpp  # Example PCRE patterns from LLM tokenizers
-└── test-harness/
-    ├── CMakeLists.txt  # Build configuration
-    ├── main.cpp        # Test harness entry point
-    ├── unicode.cpp     # Unicode helper implementations
-    ├── unicode.h       # Unicode types and flags
-    ├── generated/      # Generated C++ pattern code
-    └── build/          # Build artifacts
+├── tests.yaml          # Test patterns and test input references
+├── test-harness/
+│   ├── CMakeLists.txt  # Build configuration
+│   ├── test-main.cpp   # Test harness entry point
+│   ├── unicode.cpp     # Unicode helper implementations
+│   ├── unicode.h       # Unicode types and flags
+│   ├── generated/      # Generated C++ pattern code
+│   ├── inputs/         # Test input files (edge_cases.yaml, etc.)
+│   └── build/          # Build artifacts
+└── examples/           # Example patterns and reference code
 ```
