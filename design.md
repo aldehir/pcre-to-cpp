@@ -13,25 +13,13 @@ This tool converts PCRE (Perl Compatible Regular Expressions) patterns into stan
 
 ## Architecture
 
-```
-┌─────────────────┐     ┌────────────────────────────┐     ┌────────────────┐
-│  PCRE Pattern   │ ──► │  Recursive Descent Parser  │ ──► │       AST      │
-└─────────────────┘     └────────────────────────────┘     └────────┬───────┘
-                                                                    │
-                                                                    ▼
-                                                           ┌────────────────┐
-                                                           │  AST Optimizer │
-                                                           └────────┬───────┘
-                                                                    │
-                                                                    ▼
-                                                           ┌────────────────┐
-                                                           │  C++ Emitter   │
-                                                           └────────┬───────┘
-                                                                    │
-                                                                    ▼
-                                                           ┌────────────────┐
-                                                           │  C++ Function  │
-                                                           └────────────────┘
+```mermaid
+flowchart TD
+    A["PCRE Pattern"] --> B["Recursive Descent Parser"]
+    B --> C["AST"]
+    C --> D["AST Optimizer"]
+    D --> E["C++ Emitter"]
+    E --> F["C++ Function"]
 ```
 
 ## Parser Design
