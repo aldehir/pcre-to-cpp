@@ -1,0 +1,73 @@
+
+============================================================
+Benchmark: gpt2
+PCRE pattern:  's|'t|'re|'ve|'m|'ll|'d| ?\p{L}+| ?\p{N}+| ?[^\s\p...
+STL pattern:   's|'t|'re|'ve|'m|'ll|'d| ?[A-Za-z]+| ?[0-9]+| ?[^\...
+Test strings:  25
+============================================================
+
+[1/3] Generating C++ code from PCRE pattern...
+Generated: E:\Development\AI\pcre-to-cpp\test-harness\generated\benchmarks\gpt2.cpp
+
+[2/3] Building benchmark executable...
+Build successful
+
+[3/3] Running benchmark...
+
+============================================================
+BENCHMARK SUMMARY: gpt2
+============================================================
+Total Generated C++ time: 73.640ms
+Total STL Regex time:     925.728ms
+Average speedup:          20.7x
+Token mismatches:         8 (STL pattern may differ from PCRE)
+
+============================================================
+Benchmark: llama3
+PCRE pattern:  (?i:'s|'t|'re|'ve|'m|'ll|'d)|[^\r\n\p{L}\p{N}]?\p{...
+STL pattern:   (?:'[sS]|'[tT]|'[rR][eE]|'[vV][eE]|'[mM]|'[lL][lL]...
+Test strings:  25
+============================================================
+
+[1/3] Generating C++ code from PCRE pattern...
+Generated: E:\Development\AI\pcre-to-cpp\test-harness\generated\benchmarks\llama3.cpp
+
+[2/3] Building benchmark executable...
+Build successful
+
+[3/3] Running benchmark...
+
+============================================================
+BENCHMARK SUMMARY: llama3
+============================================================
+Total Generated C++ time: 69.754ms
+Total STL Regex time:     1473.822ms
+Average speedup:          38.1x
+Token mismatches:         24 (STL pattern may differ from PCRE)
+
+============================================================
+Benchmark: gpt4o
+PCRE pattern:  [^\r\n\p{L}\p{N}]?[\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]*...
+STL pattern:   [^\r\nA-Za-z0-9]?[A-Z]*[a-z]+(?:'[sS]|'[tT]|'[rR][...
+Test strings:  25
+============================================================
+
+[1/3] Generating C++ code from PCRE pattern...
+Generated: E:\Development\AI\pcre-to-cpp\test-harness\generated\benchmarks\gpt4o.cpp
+
+[2/3] Building benchmark executable...
+Build successful
+
+[3/3] Running benchmark...
+
+============================================================
+BENCHMARK SUMMARY: gpt4o
+============================================================
+Total Generated C++ time: 144.192ms
+Total STL Regex time:     5812.643ms
+Average speedup:          34.8x
+Token mismatches:         5 (STL pattern may differ from PCRE)
+
+============================================================
+ALL 3 BENCHMARK(S) COMPLETED SUCCESSFULLY
+============================================================
