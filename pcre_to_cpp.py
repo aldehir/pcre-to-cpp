@@ -1092,9 +1092,8 @@ class CppEmitter:
             is_quant = isinstance(child, Quantifier) or \
                        (isinstance(child, GroupNode) and self._contains_quantifier(child.child))
 
-            if is_quant:
-                has_quantifier = True
-            elif has_quantifier:
+            # Check BEFORE updating has_quantifier
+            if has_quantifier:
                 # Something after a quantifier - might need backtracking
                 if isinstance(child, (Lookahead, LiteralChar, CharClass, Predefined,
                                       UnicodeCategory, SpecialChar, AnyChar)):
@@ -1103,8 +1102,11 @@ class CppEmitter:
                     return True
                 if isinstance(child, Alternation):
                     return True
-                if isinstance(child, Quantifier):
+                if is_quant:
                     return True  # Multiple quantifiers in sequence
+
+            if is_quant:
+                has_quantifier = True
         return False
 
     def _generate_sequence_match(self, children: list, case_insensitive: bool = False):
@@ -1119,10 +1121,10 @@ class CppEmitter:
     def _generate_sequence_with_backtracking(self, children: list, case_insensitive: bool = False):
         """Generate sequence matching with full backtracking support.
 
-        Strategy: For each quantifier, collect ALL possible match positions upfront.
-        Then use nested loops to try all combinations, longest first.
+        Strategy: For each quantifier, collect ALL possible match positions.
+        Use nested loops to try all combinations, longest first (greedy).
         """
-        # Find quantifiers and their indices
+        # Build a list of (child_index, child, is_quantifier) tuples
         quantifier_indices = []
         for i, child in enumerate(children):
             if isinstance(child, Quantifier):
@@ -1137,94 +1139,115 @@ class CppEmitter:
         if len(children) > 5:
             pattern_str += "..."
 
-        self._emit(f"// Sequence with backtracking: {pattern_str}")
+        # Generate unique label for this sequence
+        label = self._temp_var("seq_done")
+
+        self._emit(f"// Sequence with backtracking ({len(quantifier_indices)} quantifiers): {pattern_str}")
         self._emit("{")
         self.indent_level += 1
 
         self._emit("bool seq_matched = false;")
-        self._emit("size_t seq_start = match_pos;")
         self._emit("")
 
-        # For simplicity, handle the common case: single quantifier followed by other stuff
-        # This covers patterns like \s+(?!\S)
-        if len(quantifier_indices) == 1:
-            quant_idx = quantifier_indices[0]
-            quant = children[quant_idx]
-
-            # Generate elements before quantifier
-            for i in range(quant_idx):
-                self._generate_node_match(children[i], case_insensitive)
-                self._emit("if (!matched) goto seq_end;")
-                self._emit("")
-
-            # Collect all positions for the quantifier
-            self._emit("// Collect all possible quantifier match lengths")
-            self._emit("std::vector<size_t> bt_positions;")
-            self._emit("bt_positions.push_back(match_pos);")
-            self._emit("{")
-            self.indent_level += 1
-
-            min_c = quant.min_count
-            max_c = quant.max_count
-
-            if max_c == -1:
-                self._emit("while (true) {")
-            else:
-                self._emit(f"while (bt_positions.size() <= {max_c}) {{")
-
-            self.indent_level += 1
-            self._emit("size_t save_pos = match_pos;")
-            self._generate_node_match(quant.child, case_insensitive)
-            self._emit("if (matched && match_pos > save_pos) {")
-            self.indent_level += 1
-            self._emit("bt_positions.push_back(match_pos);")
-            self.indent_level -= 1
-            self._emit("} else {")
-            self.indent_level += 1
-            self._emit("match_pos = save_pos;")
-            self._emit("break;")
-            self.indent_level -= 1
-            self._emit("}")
-            self.indent_level -= 1
-            self._emit("}")
-            self.indent_level -= 1
-            self._emit("}")
+        # Generate elements before first quantifier
+        first_quant_idx = quantifier_indices[0]
+        for i in range(first_quant_idx):
+            self._generate_node_match(children[i], case_insensitive)
+            self._emit(f"if (!matched) goto {label};")
             self._emit("")
 
-            # Check minimum count
-            self._emit(f"// Need at least {min_c} matches")
-            self._emit(f"if (bt_positions.size() <= {min_c}) goto seq_end;")
+        # Generate nested backtracking loops for each quantifier
+        self._generate_multi_quantifier_loops(
+            children, quantifier_indices, 0, case_insensitive
+        )
+
+        self._emit("")
+        self._emit(f"{label}:")
+        self._emit("matched = seq_matched;")
+
+        self.indent_level -= 1
+        self._emit("}")
+
+    def _generate_multi_quantifier_loops(self, children: list, quant_indices: list,
+                                          quant_num: int, case_insensitive: bool):
+        """Generate nested loops for multiple quantifiers.
+
+        For each quantifier, we:
+        1. Collect all possible match positions
+        2. Loop from longest to shortest
+        3. Inside the loop, either recurse to next quantifier or try remaining pattern
+        """
+        quant_idx = quant_indices[quant_num]
+        quant = children[quant_idx]
+        min_c = quant.min_count
+        max_c = quant.max_count
+        var_name = f"q{quant_num}_pos"
+
+        # Collect positions for this quantifier
+        self._emit(f"// Quantifier {quant_num}: {self._ast_to_pattern(quant)}")
+        self._emit(f"std::vector<size_t> {var_name};")
+        self._emit(f"{var_name}.push_back(match_pos);")
+        self._emit("{")
+        self.indent_level += 1
+
+        if max_c == -1:
+            self._emit("while (true) {")
+        else:
+            self._emit(f"while ({var_name}.size() <= {max_c}) {{")
+
+        self.indent_level += 1
+        self._emit("size_t save_pos = match_pos;")
+        self._emit("matched = true;")
+        self._generate_node_match(quant.child, case_insensitive)
+        self._emit("if (matched && match_pos > save_pos) {")
+        self.indent_level += 1
+        self._emit(f"{var_name}.push_back(match_pos);")
+        self.indent_level -= 1
+        self._emit("} else {")
+        self.indent_level += 1
+        self._emit("match_pos = save_pos;")
+        self._emit("break;")
+        self.indent_level -= 1
+        self._emit("}")
+        self.indent_level -= 1
+        self._emit("}")
+        self.indent_level -= 1
+        self._emit("}")
+        self._emit("")
+
+        # Loop through positions from longest to shortest
+        self._emit(f"// Try quantifier {quant_num} positions (need > {min_c} for min_count={min_c})")
+        self._emit(f"for (size_t i{quant_num} = {var_name}.size(); i{quant_num} > {min_c}; i{quant_num}--) {{")
+        self.indent_level += 1
+        self._emit(f"match_pos = {var_name}[i{quant_num} - 1];")
+        self._emit("matched = true;")
+        self._emit("")
+
+        # Find elements between this quantifier and the next (or end)
+        next_quant_idx = quant_indices[quant_num + 1] if quant_num + 1 < len(quant_indices) else len(children)
+
+        # Generate elements between quantifiers
+        for i in range(quant_idx + 1, next_quant_idx):
+            self._generate_node_match(children[i], case_insensitive)
+            self._emit("if (!matched) continue;")
             self._emit("")
 
-            # Try positions from longest to shortest
-            self._emit("// Try positions from longest to shortest")
-            self._emit(f"while (bt_positions.size() > {min_c}) {{")
-            self.indent_level += 1
-            self._emit("match_pos = bt_positions.back();")
-            self._emit("matched = true;")
-            self._emit("")
-
-            # Generate elements after quantifier
-            for i in range(quant_idx + 1, len(children)):
+        # Either recurse to next quantifier or finish
+        if quant_num + 1 < len(quant_indices):
+            # More quantifiers to process
+            self._generate_multi_quantifier_loops(
+                children, quant_indices, quant_num + 1, case_insensitive
+            )
+            self._emit("if (seq_matched) break;")
+        else:
+            # Last quantifier - generate remaining elements and check success
+            for i in range(next_quant_idx, len(children)):
                 self._generate_node_match(children[i], case_insensitive)
                 if i < len(children) - 1:
-                    self._emit("if (!matched) { bt_positions.pop_back(); continue; }")
+                    self._emit("if (!matched) continue;")
                     self._emit("")
 
-            self._emit("")
             self._emit("if (matched) { seq_matched = true; break; }")
-            self._emit("bt_positions.pop_back();")
-            self.indent_level -= 1
-            self._emit("}")
-
-            self._emit("")
-            self._emit("seq_end:")
-            self._emit("matched = seq_matched;")
-        else:
-            # Multiple quantifiers - fall back to simpler approach for now
-            # TODO: implement full multi-quantifier backtracking
-            for child in children:
-                self._generate_node_match(child, case_insensitive)
 
         self.indent_level -= 1
         self._emit("}")
