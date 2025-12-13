@@ -585,15 +585,9 @@ class CppEmitter:
         if pattern:
             self._emit("//")
             self._emit("// Original PCRE pattern:")
-            # Split long patterns across multiple lines
-            if len(pattern) > 70:
-                self._emit(f"//   {pattern[:70]}")
-                remaining = pattern[70:]
-                while remaining:
-                    self._emit(f"//   {remaining[:70]}")
-                    remaining = remaining[70:]
-            else:
-                self._emit(f"//   {pattern}")
+            self._emit("//")
+            self._emit(f"//   {pattern}")
+            self._emit("//")
         self._emit("")
         self._emit_block('''
             #include "unicode.h"
