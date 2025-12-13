@@ -1,199 +1,198 @@
 # Programming code test inputs
 # Ordered from simple to complex
 
-tests:
-  # Simple identifiers and operators
-  - "x"
-  - "foo"
-  - "my_variable"
-  - "a + b"
-  - "x = 5"
+# Simple identifiers and operators
+- "x"
+- "foo"
+- "my_variable"
+- "a + b"
+- "x = 5"
 
-  # Basic expressions
-  - "result = x * y"
-  - "if (x > 0)"
-  - "return true;"
-  - "count += 1"
-  - "value == 42"
+# Basic expressions
+- "result = x * y"
+- "if (x > 0)"
+- "return true;"
+- "count += 1"
+- "value == 42"
 
-  # Function calls
-  - "print(\"hello\")"
-  - "len(array)"
-  - "Math.max(a, b)"
-  - "array.map(x => x * 2)"
+# Function calls
+- "print(\"hello\")"
+- "len(array)"
+- "Math.max(a, b)"
+- "array.map(x => x * 2)"
 
-  # Keywords and simple statements
-  - "def calculate():"
-  - "for i in range(10):"
-  - "const value = null;"
-  - "import numpy as np"
+# Keywords and simple statements
+- "def calculate():"
+- "for i in range(10):"
+- "const value = null;"
+- "import numpy as np"
 
-  # Medium complexity - single functions
-  - |
-    def factorial(n):
-        if n <= 1:
-            return 1
-        return n * factorial(n - 1)
+# Medium complexity - single functions
+- |
+  def factorial(n):
+      if n <= 1:
+          return 1
+      return n * factorial(n - 1)
 
-  - |
-    function fibonacci(n) {
-        if (n <= 1) return n;
-        return fibonacci(n - 1) + fibonacci(n - 2);
-    }
+- |
+  function fibonacci(n) {
+      if (n <= 1) return n;
+      return fibonacci(n - 1) + fibonacci(n - 2);
+  }
 
-  - |
-    const calculateSum = (arr) => {
-        return arr.reduce((acc, val) => acc + val, 0);
-    };
+- |
+  const calculateSum = (arr) => {
+      return arr.reduce((acc, val) => acc + val, 0);
+  };
 
-  # Classes and methods
-  - |
-    class Calculator:
-        def __init__(self):
-            self.result = 0
+# Classes and methods
+- |
+  class Calculator:
+      def __init__(self):
+          self.result = 0
 
-        def add(self, x):
-            self.result += x
-            return self
+      def add(self, x):
+          self.result += x
+          return self
 
-  - |
-    public class BinarySearch {
-        public static int search(int[] arr, int target) {
-            int left = 0, right = arr.length - 1;
-            while (left <= right) {
-                int mid = left + (right - left) / 2;
-                if (arr[mid] == target) return mid;
-                if (arr[mid] < target) left = mid + 1;
-                else right = mid - 1;
-            }
-            return -1;
-        }
-    }
+- |
+  public class BinarySearch {
+      public static int search(int[] arr, int target) {
+          int left = 0, right = arr.length - 1;
+          while (left <= right) {
+              int mid = left + (right - left) / 2;
+              if (arr[mid] == target) return mid;
+              if (arr[mid] < target) left = mid + 1;
+              else right = mid - 1;
+          }
+          return -1;
+      }
+  }
 
-  # Complex with comments and docstrings
-  - |
-    /**
-     * Merges two sorted arrays into a single sorted array.
-     * @param {number[]} arr1 - First sorted array
-     * @param {number[]} arr2 - Second sorted array
-     * @returns {number[]} Merged sorted array
-     */
-    function mergeSortedArrays(arr1, arr2) {
-        const result = [];
-        let i = 0, j = 0;
+# Complex with comments and docstrings
+- |
+  /**
+   * Merges two sorted arrays into a single sorted array.
+   * @param {number[]} arr1 - First sorted array
+   * @param {number[]} arr2 - Second sorted array
+   * @returns {number[]} Merged sorted array
+   */
+  function mergeSortedArrays(arr1, arr2) {
+      const result = [];
+      let i = 0, j = 0;
 
-        while (i < arr1.length && j < arr2.length) {
-            if (arr1[i] < arr2[j]) {
-                result.push(arr1[i++]);
-            } else {
-                result.push(arr2[j++]);
-            }
-        }
+      while (i < arr1.length && j < arr2.length) {
+          if (arr1[i] < arr2[j]) {
+              result.push(arr1[i++]);
+          } else {
+              result.push(arr2[j++]);
+          }
+      }
 
-        return result.concat(arr1.slice(i)).concat(arr2.slice(j));
-    }
+      return result.concat(arr1.slice(i)).concat(arr2.slice(j));
+  }
 
-  # Async/await patterns
-  - |
-    async function fetchUserData(userId) {
-        try {
-            const response = await fetch(`/api/users/${userId}`);
-            if (!response.ok) {
-                throw new Error('User not found');
-            }
-            const data = await response.json();
-            return data;
-        } catch (error) {
-            console.error('Error fetching user:', error);
-            return null;
-        }
-    }
+# Async/await patterns
+- |
+  async function fetchUserData(userId) {
+      try {
+          const response = await fetch(`/api/users/${userId}`);
+          if (!response.ok) {
+              throw new Error('User not found');
+          }
+          const data = await response.json();
+          return data;
+      } catch (error) {
+          console.error('Error fetching user:', error);
+          return null;
+      }
+  }
 
-  # Complex algorithm with multiple components
-  - |
-    def quicksort(arr):
-        """
-        Sorts an array using the quicksort algorithm.
-        Time complexity: O(n log n) average, O(n^2) worst case.
-        """
-        if len(arr) <= 1:
-            return arr
+# Complex algorithm with multiple components
+- |
+  def quicksort(arr):
+      """
+      Sorts an array using the quicksort algorithm.
+      Time complexity: O(n log n) average, O(n^2) worst case.
+      """
+      if len(arr) <= 1:
+          return arr
 
-        pivot = arr[len(arr) // 2]
-        left = [x for x in arr if x < pivot]
-        middle = [x for x in arr if x == pivot]
-        right = [x for x in arr if x > pivot]
+      pivot = arr[len(arr) // 2]
+      left = [x for x in arr if x < pivot]
+      middle = [x for x in arr if x == pivot]
+      right = [x for x in arr if x > pivot]
 
-        return quicksort(left) + middle + quicksort(right)
+      return quicksort(left) + middle + quicksort(right)
 
-  # Real-world React component
-  - |
-    import React, { useState, useEffect } from 'react';
+# Real-world React component
+- |
+  import React, { useState, useEffect } from 'react';
 
-    const UserProfile = ({ userId }) => {
-        const [user, setUser] = useState(null);
-        const [loading, setLoading] = useState(true);
+  const UserProfile = ({ userId }) => {
+      const [user, setUser] = useState(null);
+      const [loading, setLoading] = useState(true);
 
-        useEffect(() => {
-            const fetchUser = async () => {
-                try {
-                    const response = await fetch(`/api/users/${userId}`);
-                    const data = await response.json();
-                    setUser(data);
-                } catch (error) {
-                    console.error('Failed to fetch user:', error);
-                } finally {
-                    setLoading(false);
-                }
-            };
+      useEffect(() => {
+          const fetchUser = async () => {
+              try {
+                  const response = await fetch(`/api/users/${userId}`);
+                  const data = await response.json();
+                  setUser(data);
+              } catch (error) {
+                  console.error('Failed to fetch user:', error);
+              } finally {
+                  setLoading(false);
+              }
+          };
 
-            fetchUser();
-        }, [userId]);
+          fetchUser();
+      }, [userId]);
 
-        if (loading) return <div>Loading...</div>;
-        if (!user) return <div>User not found</div>;
+      if (loading) return <div>Loading...</div>;
+      if (!user) return <div>User not found</div>;
 
-        return (
-            <div className="user-profile">
-                <h1>{user.name}</h1>
-                <p>{user.email}</p>
-            </div>
-        );
-    };
+      return (
+          <div className="user-profile">
+              <h1>{user.name}</h1>
+              <p>{user.email}</p>
+          </div>
+      );
+  };
 
-    export default UserProfile;
+  export default UserProfile;
 
-  # Complex Python with type hints and decorators
-  - |
-    from typing import List, Dict, Optional, Callable
-    from functools import wraps
-    import time
+# Complex Python with type hints and decorators
+- |
+  from typing import List, Dict, Optional, Callable
+  from functools import wraps
+  import time
 
-    def timer(func: Callable) -> Callable:
-        """Decorator to measure function execution time."""
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            start = time.time()
-            result = func(*args, **kwargs)
-            end = time.time()
-            print(f"{func.__name__} took {end - start:.4f} seconds")
-            return result
-        return wrapper
+  def timer(func: Callable) -> Callable:
+      """Decorator to measure function execution time."""
+      @wraps(func)
+      def wrapper(*args, **kwargs):
+          start = time.time()
+          result = func(*args, **kwargs)
+          end = time.time()
+          print(f"{func.__name__} took {end - start:.4f} seconds")
+          return result
+      return wrapper
 
-    class DataProcessor:
-        """Processes and analyzes data collections."""
+  class DataProcessor:
+      """Processes and analyzes data collections."""
 
-        def __init__(self, data: List[Dict[str, any]]):
-            self.data = data
-            self._cache: Dict[str, any] = {}
+      def __init__(self, data: List[Dict[str, any]]):
+          self.data = data
+          self._cache: Dict[str, any] = {}
 
-        @timer
-        def aggregate(self, key: str) -> Optional[float]:
-            """Aggregates numeric values for a given key."""
-            if key in self._cache:
-                return self._cache[key]
+      @timer
+      def aggregate(self, key: str) -> Optional[float]:
+          """Aggregates numeric values for a given key."""
+          if key in self._cache:
+              return self._cache[key]
 
-            values = [item[key] for item in self.data if key in item]
-            result = sum(values) / len(values) if values else None
-            self._cache[key] = result
-            return result
+          values = [item[key] for item in self.data if key in item]
+          result = sum(values) / len(values) if values else None
+          self._cache[key] = result
+          return result

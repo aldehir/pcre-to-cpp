@@ -212,8 +212,11 @@ def load_test_inputs(input_names: list[str]) -> list[str]:
             continue
         with open(input_file, encoding='utf-8') as f:
             data = yaml.safe_load(f)
-            tests = data.get('tests', [])
-            all_tests.extend(tests)
+            # Expect top-level list
+            if isinstance(data, list):
+                all_tests.extend(data)
+            else:
+                print(f"Warning: Expected list in {input_file}, got {type(data)}", file=sys.stderr)
     return all_tests
 
 
@@ -277,15 +280,13 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Config file format (YAML):
-patterns:
-  - name: test_name
-    pattern: "\\\\p{L}+"
-    test_inputs:
-      - natural_language
-      - code
+- name: test_name
+  pattern: "\\\\p{L}+"
+  inputs:
+    - natural_language
+    - code
 
-Test inputs are loaded from YAML files in test-harness/inputs/
-Each input file contains a 'tests' list of strings.
+Input files are loaded from test-harness/inputs/ (top-level YAML lists).
 
 Example usage:
     python run_tests.py                     # Run all tests from tests.yaml
@@ -312,14 +313,19 @@ Example usage:
     with open(config_path, encoding='utf-8') as f:
         config = yaml.safe_load(f)
 
-    patterns = config.get("patterns", [])
+    # Expect top-level list of patterns
+    if isinstance(config, list):
+        patterns = config
+    else:
+        print(f"Error: Expected list in config file, got {type(config)}", file=sys.stderr)
+        sys.exit(1)
 
     if args.list:
         print(f"Available tests in {config_path}:")
         for p in patterns:
             name = p.get("name", "unnamed")
             pattern = p.get("pattern", "")[:40]
-            inputs = ", ".join(p.get("test_inputs", []))
+            inputs = ", ".join(p.get("inputs", []))
             print(f"  - {name}: inputs=[{inputs}], pattern: {pattern}...")
         sys.exit(0)
 
@@ -335,7 +341,7 @@ Example usage:
     for test_case in patterns:
         pattern = test_case["pattern"]
         name = test_case.get("name", "unnamed")
-        input_names = test_case.get("test_inputs", [])
+        input_names = test_case.get("inputs", [])
         print(f"\n### Testing: {name} ###")
         test_strings = load_test_inputs(input_names)
         if not test_strings:

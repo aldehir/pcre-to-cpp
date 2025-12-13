@@ -1,164 +1,163 @@
 # Mathematical expression test inputs
 # Ordered from simple to complex
 
-tests:
-  # Simple arithmetic
-  - "1 + 1"
-  - "2 * 3"
-  - "10 / 5"
-  - "7 - 4"
-  - "2^3"
+# Simple arithmetic
+- "1 + 1"
+- "2 * 3"
+- "10 / 5"
+- "7 - 4"
+- "2^3"
 
-  # Basic expressions with variables
-  - "x + y"
-  - "a * b + c"
-  - "2x + 3y"
-  - "f(x)"
-  - "x^2"
+# Basic expressions with variables
+- "x + y"
+- "a * b + c"
+- "2x + 3y"
+- "f(x)"
+- "x^2"
 
-  # Equations
-  - "y = mx + b"
-  - "x^2 + y^2 = r^2"
-  - "E = mc^2"
-  - "a^2 + b^2 = c^2"
-  - "f(x) = x^2 + 2x + 1"
+# Equations
+- "y = mx + b"
+- "x^2 + y^2 = r^2"
+- "E = mc^2"
+- "a^2 + b^2 = c^2"
+- "f(x) = x^2 + 2x + 1"
 
-  # More complex expressions
-  - "(a + b)(c + d)"
-  - "x^2 - 2xy + y^2"
-  - "sqrt(x^2 + y^2)"
-  - "log(x) + ln(y)"
-  - "sin(x) + cos(y)"
+# More complex expressions
+- "(a + b)(c + d)"
+- "x^2 - 2xy + y^2"
+- "sqrt(x^2 + y^2)"
+- "log(x) + ln(y)"
+- "sin(x) + cos(y)"
 
-  # Calculus notation
-  - "dy/dx"
-  - "d^2y/dx^2"
-  - "∂f/∂x"
-  - "lim(x->0) f(x)"
-  - "∫ x dx"
+# Calculus notation
+- "dy/dx"
+- "d^2y/dx^2"
+- "∂f/∂x"
+- "lim(x->0) f(x)"
+- "∫ x dx"
 
-  # Greek letters and special symbols
-  - "α + β = γ"
-  - "θ = 2πr"
-  - "Δx = x₂ - x₁"
-  - "∑ᵢ xᵢ"
-  - "∏ᵢ aᵢ"
+# Greek letters and special symbols
+- "α + β = γ"
+- "θ = 2πr"
+- "Δx = x₂ - x₁"
+- "∑ᵢ xᵢ"
+- "∏ᵢ aᵢ"
 
-  # Complex equations
-  - |
-    Quadratic formula: x = (-b ± sqrt(b^2 - 4ac)) / (2a)
+# Complex equations
+- |
+  Quadratic formula: x = (-b ± sqrt(b^2 - 4ac)) / (2a)
 
-  - |
-    Pythagorean theorem: In a right triangle, a^2 + b^2 = c^2,
-    where c is the hypotenuse.
+- |
+  Pythagorean theorem: In a right triangle, a^2 + b^2 = c^2,
+  where c is the hypotenuse.
 
-  - |
-    Euler's identity: e^(iπ) + 1 = 0
-    This is often called the most beautiful equation in mathematics.
+- |
+  Euler's identity: e^(iπ) + 1 = 0
+  This is often called the most beautiful equation in mathematics.
 
-  # Set theory and logic
-  - |
-    Set notation: A ∪ B, A ∩ B, A ⊂ B, A ⊆ B
-    Logic: ∀x ∈ ℝ, ∃y ∈ ℝ: y > x
-    Implication: P → Q, P ⇒ Q, P ⇔ Q
+# Set theory and logic
+- |
+  Set notation: A ∪ B, A ∩ B, A ⊂ B, A ⊆ B
+  Logic: ∀x ∈ ℝ, ∃y ∈ ℝ: y > x
+  Implication: P → Q, P ⇒ Q, P ⇔ Q
 
-  # Linear algebra
-  - |
-    Matrix multiplication: C = AB
-    Determinant: det(A) = |A|
-    Transpose: A^T
-    Inverse: A^(-1)
-    Eigenvalues: Av = λv
+# Linear algebra
+- |
+  Matrix multiplication: C = AB
+  Determinant: det(A) = |A|
+  Transpose: A^T
+  Inverse: A^(-1)
+  Eigenvalues: Av = λv
 
-  # Calculus expressions
-  - |
-    Derivative rules:
-    d/dx[x^n] = nx^(n-1)
-    d/dx[e^x] = e^x
-    d/dx[ln(x)] = 1/x
-    d/dx[sin(x)] = cos(x)
+# Calculus expressions
+- |
+  Derivative rules:
+  d/dx[x^n] = nx^(n-1)
+  d/dx[e^x] = e^x
+  d/dx[ln(x)] = 1/x
+  d/dx[sin(x)] = cos(x)
 
-  - |
-    Integral formulas:
-    ∫ x^n dx = (x^(n+1))/(n+1) + C
-    ∫ e^x dx = e^x + C
-    ∫ 1/x dx = ln|x| + C
-    ∫₀^∞ e^(-x) dx = 1
+- |
+  Integral formulas:
+  ∫ x^n dx = (x^(n+1))/(n+1) + C
+  ∫ e^x dx = e^x + C
+  ∫ 1/x dx = ln|x| + C
+  ∫₀^∞ e^(-x) dx = 1
 
-  # Advanced calculus
-  - |
-    Taylor series expansion:
-    f(x) = f(a) + f'(a)(x-a) + (f''(a)/2!)(x-a)^2 + (f'''(a)/3!)(x-a)^3 + ...
+# Advanced calculus
+- |
+  Taylor series expansion:
+  f(x) = f(a) + f'(a)(x-a) + (f''(a)/2!)(x-a)^2 + (f'''(a)/3!)(x-a)^3 + ...
 
-    For e^x: e^x = 1 + x + x^2/2! + x^3/3! + x^4/4! + ...
+  For e^x: e^x = 1 + x + x^2/2! + x^3/3! + x^4/4! + ...
 
-  - |
-    Fourier transform:
-    F(ω) = ∫₋∞^∞ f(t)e^(-iωt) dt
+- |
+  Fourier transform:
+  F(ω) = ∫₋∞^∞ f(t)e^(-iωt) dt
 
-    Inverse Fourier transform:
-    f(t) = (1/2π) ∫₋∞^∞ F(ω)e^(iωt) dω
+  Inverse Fourier transform:
+  f(t) = (1/2π) ∫₋∞^∞ F(ω)e^(iωt) dω
 
-  # Differential equations
-  - |
-    First-order linear ODE: dy/dx + P(x)y = Q(x)
+# Differential equations
+- |
+  First-order linear ODE: dy/dx + P(x)y = Q(x)
 
-    Second-order linear ODE: d²y/dx² + P(x)dy/dx + Q(x)y = R(x)
+  Second-order linear ODE: d²y/dx² + P(x)dy/dx + Q(x)y = R(x)
 
-    Heat equation: ∂u/∂t = α(∂²u/∂x²)
+  Heat equation: ∂u/∂t = α(∂²u/∂x²)
 
-    Wave equation: ∂²u/∂t² = c²(∂²u/∂x²)
+  Wave equation: ∂²u/∂t² = c²(∂²u/∂x²)
 
-  # Statistics and probability
-  - |
-    Mean: μ = (Σxᵢ)/n
-    Variance: σ² = Σ(xᵢ - μ)²/n
-    Standard deviation: σ = sqrt(σ²)
+# Statistics and probability
+- |
+  Mean: μ = (Σxᵢ)/n
+  Variance: σ² = Σ(xᵢ - μ)²/n
+  Standard deviation: σ = sqrt(σ²)
 
-    Normal distribution: f(x) = (1/(σ√(2π))) * e^(-(x-μ)²/(2σ²))
+  Normal distribution: f(x) = (1/(σ√(2π))) * e^(-(x-μ)²/(2σ²))
 
-  # Complex analysis
-  - |
-    Complex numbers: z = x + iy, where i² = -1
-    Modulus: |z| = sqrt(x² + y²)
-    Argument: arg(z) = arctan(y/x)
-    Euler's formula: e^(iθ) = cos(θ) + i·sin(θ)
+# Complex analysis
+- |
+  Complex numbers: z = x + iy, where i² = -1
+  Modulus: |z| = sqrt(x² + y²)
+  Argument: arg(z) = arctan(y/x)
+  Euler's formula: e^(iθ) = cos(θ) + i·sin(θ)
 
-    Cauchy-Riemann equations:
-    ∂u/∂x = ∂v/∂y
-    ∂u/∂y = -∂v/∂x
+  Cauchy-Riemann equations:
+  ∂u/∂x = ∂v/∂y
+  ∂u/∂y = -∂v/∂x
 
-  # Complete mathematical proof
-  - |
-    Theorem: The sum of the first n natural numbers is n(n+1)/2.
+# Complete mathematical proof
+- |
+  Theorem: The sum of the first n natural numbers is n(n+1)/2.
 
-    Proof (by induction):
-    Base case: n = 1
-      Sum = 1 = 1(1+1)/2 = 1 ✓
+  Proof (by induction):
+  Base case: n = 1
+    Sum = 1 = 1(1+1)/2 = 1 ✓
 
-    Inductive step: Assume true for n = k:
-      1 + 2 + ... + k = k(k+1)/2
+  Inductive step: Assume true for n = k:
+    1 + 2 + ... + k = k(k+1)/2
 
-    Prove for n = k+1:
-      1 + 2 + ... + k + (k+1)
-      = k(k+1)/2 + (k+1)
-      = (k(k+1) + 2(k+1))/2
-      = ((k+1)(k+2))/2
-      = (k+1)((k+1)+1)/2 ✓
+  Prove for n = k+1:
+    1 + 2 + ... + k + (k+1)
+    = k(k+1)/2 + (k+1)
+    = (k(k+1) + 2(k+1))/2
+    = ((k+1)(k+2))/2
+    = (k+1)((k+1)+1)/2 ✓
 
-    Therefore, by mathematical induction, the formula holds for all n ∈ ℕ. ∎
+  Therefore, by mathematical induction, the formula holds for all n ∈ ℕ. ∎
 
-  # LaTeX-style complex notation
-  - |
-    Quantum mechanics - Schrödinger equation:
-    iℏ(∂ψ/∂t) = Ĥψ
+# LaTeX-style complex notation
+- |
+  Quantum mechanics - Schrödinger equation:
+  iℏ(∂ψ/∂t) = Ĥψ
 
-    Where:
-    - ψ is the wave function
-    - ℏ is the reduced Planck constant (h/2π)
-    - Ĥ is the Hamiltonian operator: Ĥ = -(ℏ²/2m)∇² + V(r,t)
+  Where:
+  - ψ is the wave function
+  - ℏ is the reduced Planck constant (h/2π)
+  - Ĥ is the Hamiltonian operator: Ĥ = -(ℏ²/2m)∇² + V(r,t)
 
-    Time-independent form:
-    Ĥψ = Eψ
+  Time-independent form:
+  Ĥψ = Eψ
 
-    This is an eigenvalue equation where E represents energy eigenvalues.
+  This is an eigenvalue equation where E represents energy eigenvalues.
