@@ -8,3 +8,10 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Test harness build artifacts
+test-harness/build/
+
+# Generated code (keep directory, ignore contents)
+test-harness/generated/*.cpp
+test-harness/generated/*.h

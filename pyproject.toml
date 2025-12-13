@@ -6,4 +6,5 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "pyparsing>=3.2.5",
+    "regex>=2025.11.3",
 ]
