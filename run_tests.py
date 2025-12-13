@@ -15,6 +15,7 @@ import os
 import shutil
 import subprocess
 import sys
+import yaml
 from pathlib import Path
 
 # Ensure UTF-8 output on Windows
@@ -201,15 +202,27 @@ def compare_results(cpp_results: list[list[str]], ref_results: list[list[str]],
     return all_match
 
 
+def load_test_inputs(input_names: list[str]) -> list[str]:
+    """Load and combine test strings from input files."""
+    all_tests = []
+    for name in input_names:
+        input_file = HARNESS_DIR / "inputs" / f"{name}.yaml"
+        if not input_file.exists():
+            print(f"Warning: Input file not found: {input_file}", file=sys.stderr)
+            continue
+        with open(input_file, encoding='utf-8') as f:
+            data = yaml.safe_load(f)
+            tests = data.get('tests', [])
+            all_tests.extend(tests)
+    return all_tests
+
+
 def run_test(pattern: str, test_strings: list[str], verbose: bool = False,
              tokenizer: str = None) -> bool:
     """Run a complete test cycle for a pattern."""
     print(f"\n{'='*60}")
     print(f"Pattern: {pattern[:60]}{'...' if len(pattern) > 60 else ''}")
-    if tokenizer:
-        print(f"Reference: HuggingFace tokenizer '{tokenizer}'")
-    else:
-        print(f"Reference: tokenizers library (pattern-based)")
+    print(f"Reference: tokenizers library (regex-based)")
     print(f"Test strings: {len(test_strings)}")
     print('='*60)
 
@@ -231,12 +244,8 @@ def run_test(pattern: str, test_strings: list[str], verbose: bool = False,
 
     # Step 4: Run reference tests
     print("\n[4/4] Running reference tests...")
-    if tokenizer:
-        ref_results = run_hf_tokenizer_tests(tokenizer, test_strings)
-        ref_name = f"HF:{tokenizer}"
-    else:
-        ref_results = run_tokenizers_tests(pattern, test_strings)
-        ref_name = "tokenizers"
+    ref_results = run_tokenizers_tests(pattern, test_strings)
+    ref_name = "tokenizers"
 
     if not ref_results:
         print("Failed to get reference results")
@@ -267,27 +276,26 @@ def main():
         description="Test PCRE to C++ converter",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Config file format (JSON):
-{
-    "patterns": [
-        {
-            "name": "test_name",
-            "pattern": "\\\\p{L}+",
-            "tokenizer": "gpt2",  // optional: use HF tokenizer as reference
-            "tests": ["Hello", "World"]
-        }
-    ]
-}
+Config file format (YAML):
+patterns:
+  - name: test_name
+    pattern: "\\\\p{L}+"
+    test_inputs:
+      - natural_language
+      - code
+
+Test inputs are loaded from YAML files in test-harness/inputs/
+Each input file contains a 'tests' list of strings.
 
 Example usage:
-    python run_tests.py                     # Run all tests from tests.json
-    python run_tests.py -c my_tests.json    # Run tests from specific file
+    python run_tests.py                     # Run all tests from tests.yaml
+    python run_tests.py -c my_tests.yaml    # Run tests from specific file
     python run_tests.py -n gpt2             # Run only the 'gpt2' test
     python run_tests.py -v                  # Verbose output
 """
     )
-    parser.add_argument("--config", "-c", default="tests.json",
-                        help="JSON config file with test patterns (default: tests.json)")
+    parser.add_argument("--config", "-c", default="tests.yaml",
+                        help="YAML config file with test patterns (default: tests.yaml)")
     parser.add_argument("--name", "-n", help="Run only the test with this name")
     parser.add_argument("--verbose", "-v", action="store_true", help="Verbose output")
     parser.add_argument("--list", "-l", action="store_true", help="List available tests")
@@ -298,11 +306,11 @@ Example usage:
     config_path = Path(args.config)
     if not config_path.exists():
         print(f"Error: Config file not found: {config_path}")
-        print("Create a tests.json file or specify one with --config")
+        print("Create a tests.yaml file or specify one with --config")
         sys.exit(1)
 
     with open(config_path, encoding='utf-8') as f:
-        config = json.load(f)
+        config = yaml.safe_load(f)
 
     patterns = config.get("patterns", [])
 
@@ -311,10 +319,8 @@ Example usage:
         for p in patterns:
             name = p.get("name", "unnamed")
             pattern = p.get("pattern", "")[:40]
-            tokenizer = p.get("tokenizer", "")
-            tests = len(p.get("tests", []))
-            ref = f" (ref: {tokenizer})" if tokenizer else ""
-            print(f"  - {name}: {tests} tests{ref}, pattern: {pattern}...")
+            inputs = ", ".join(p.get("test_inputs", []))
+            print(f"  - {name}: inputs=[{inputs}], pattern: {pattern}...")
         sys.exit(0)
 
     # Filter by name if specified
@@ -328,11 +334,15 @@ Example usage:
     all_success = True
     for test_case in patterns:
         pattern = test_case["pattern"]
-        test_strings = test_case.get("tests", [])
         name = test_case.get("name", "unnamed")
-        tokenizer = test_case.get("tokenizer")
+        input_names = test_case.get("test_inputs", [])
         print(f"\n### Testing: {name} ###")
-        if not run_test(pattern, test_strings, args.verbose, tokenizer):
+        test_strings = load_test_inputs(input_names)
+        if not test_strings:
+            print(f"Warning: No test strings loaded for {name}", file=sys.stderr)
+            continue
+        # Always use regex-based testing (no tokenizer parameter)
+        if not run_test(pattern, test_strings, args.verbose, tokenizer=None):
             all_success = False
 
     if all_success:

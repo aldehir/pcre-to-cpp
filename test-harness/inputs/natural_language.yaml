@@ -1,0 +1,81 @@
+# Natural language test inputs
+# Ordered from simple to complex
+
+tests:
+  # Simple sentences
+  - "Hello World"
+  - "The cat sat on the mat"
+  - "I like apples"
+  - "Good morning"
+
+  # Contractions and possessives
+  - "I'm going to the store"
+  - "It's a beautiful day"
+  - "They're coming tomorrow"
+  - "John's book is on the table"
+
+  # Multiple contractions and compound sentences
+  - "I'll see you there, won't I?"
+  - "We've been waiting, but they haven't arrived yet."
+  - "You'd better go now, or you'll be late."
+  - "She'd've come if she could, but she couldn't."
+
+  # Complex punctuation
+  - "\"Hello,\" she said, \"how are you?\""
+  - "Wait—what did you say?!"
+  - "The items were: apples, oranges, and bananas."
+  - "He asked, \"Are you sure about this?\""
+
+  # Longer sentences with multiple clauses
+  - |
+    The quick brown fox jumps over the lazy dog, while the cat watches from
+    the windowsill with mild interest.
+
+  - |
+    I can't believe it's already December! Where did the year go? It feels
+    like just yesterday we were celebrating New Year's Eve.
+
+  # Multi-sentence paragraphs
+  - |
+    The morning sun cast long shadows across the quiet street. Birds chirped
+    in the distance, and a gentle breeze rustled the leaves. It was going to
+    be a beautiful day—perfect for a walk in the park.
+
+  - |
+    "I'm not sure I understand," she said, frowning. "You're telling me that
+    we've been doing this wrong the entire time?" He nodded slowly. "I'm
+    afraid so. But don't worry—we can fix it."
+
+  # Complex dialogue and narrative
+  - |
+    The professor cleared his throat. "Today, we'll be discussing quantum
+    mechanics—specifically, the observer effect." Several students groaned.
+    "I know, I know," he continued, "but trust me, it's fascinating stuff.
+    You'll see."
+
+  # Long-form text with varied punctuation
+  - |
+    In the year 2024, technology had advanced far beyond what anyone in the
+    20th century could've imagined. Self-driving cars weren't just common—
+    they were the norm. AI assistants helped with everything from cooking
+    to coding. Yet, despite all these advances, some things remained
+    unchanged: people still loved a good story, still cherished their
+    friendships, and still wondered about life's big questions.
+
+  # Edge cases with spacing and formatting
+  - |
+    Dr. Smith went to St. Louis at 3:00 p.m. on Dec. 15th.
+    He met with Prof. Johnson, Ph.D., who said, "The data doesn't lie."
+    They discussed various topics: quantum physics, machine learning, etc.
+
+  # Very long paragraph
+  - |
+    It was the best of times, it was the worst of times, it was the age of
+    wisdom, it was the age of foolishness, it was the epoch of belief, it
+    was the epoch of incredulity, it was the season of Light, it was the
+    season of Darkness, it was the spring of hope, it was the winter of
+    despair, we had everything before us, we had nothing before us, we were
+    all going direct to Heaven, we were all going direct the other way—in
+    short, the period was so far like the present period, that some of its
+    noisiest authorities insisted on its being received, for good or for
+    evil, in the superlative degree of comparison only.
