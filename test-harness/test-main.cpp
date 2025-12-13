@@ -60,6 +60,7 @@ std::string parse_json_string(const std::string & json, size_t & pos) {
                 case 't':  result += '\t'; break;
                 case 'u':  // Unicode escape
                     if (pos + 4 <= json.size()) {
+                        // Parse the 4 hex digits
                         int codepoint = 0;
                         for (int i = 0; i < 4; i++) {
                             char hex = json[pos++];
@@ -68,6 +69,39 @@ std::string parse_json_string(const std::string & json, size_t & pos) {
                             else if (hex >= 'a' && hex <= 'f') codepoint += hex - 'a' + 10;
                             else if (hex >= 'A' && hex <= 'F') codepoint += hex - 'A' + 10;
                         }
+
+                        // Check if it's a high surrogate (0xD800-0xDBFF)
+                        if (codepoint >= 0xD800 && codepoint <= 0xDBFF) {
+                            // Look for low surrogate: \uXXXX pattern
+                            if (pos + 6 <= json.size() && json[pos] == '\\' && json[pos+1] == 'u') {
+                                // Parse the low surrogate
+                                int low = 0;
+                                size_t temp_pos = pos + 2;
+                                for (int i = 0; i < 4; i++) {
+                                    char hex = json[temp_pos++];
+                                    low *= 16;
+                                    if (hex >= '0' && hex <= '9') low += hex - '0';
+                                    else if (hex >= 'a' && hex <= 'f') low += hex - 'a' + 10;
+                                    else if (hex >= 'A' && hex <= 'F') low += hex - 'A' + 10;
+                                }
+
+                                if (low >= 0xDC00 && low <= 0xDFFF) {
+                                    // Valid surrogate pair - combine them
+                                    codepoint = 0x10000 + ((codepoint & 0x3FF) << 10) + (low & 0x3FF);
+                                    pos += 6;  // Skip the \uXXXX we just consumed
+                                } else {
+                                    // Invalid pair - use replacement character
+                                    codepoint = 0xFFFD;
+                                }
+                            } else {
+                                // Lone high surrogate - use replacement character
+                                codepoint = 0xFFFD;
+                            }
+                        } else if (codepoint >= 0xDC00 && codepoint <= 0xDFFF) {
+                            // Lone low surrogate - use replacement character
+                            codepoint = 0xFFFD;
+                        }
+
                         result += unicode_cpt_to_utf8(codepoint);
                     }
                     break;
