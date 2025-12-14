@@ -761,17 +761,12 @@ class CppEmitter:
         self.emit(
             """
 
-            // Macros for match attempts
-            // TRY_MATCH: inline condition check
-            // TRY_MATCH_BEGIN/TRY_MATCH_CHECK: multi-line with local variables
+            // Macro for match attempts
             #define TRY_MATCH(cond) do {\\
                 if (matched) { \\
                     if (cond) { match_pos++; } \\
                     else { matched = false; } \\
                 } } while (0)
-            #define TRY_MATCH_BEGIN if (matched) {
-            #define TRY_MATCH_CHECK(cond) \\
-                if (cond) { match_pos++; } else { matched = false; } }
         """)
 
         # Function documentation (blank line before doc comment)
@@ -987,13 +982,13 @@ class CppEmitter:
         # Emit multi-line lambda for readability
         self.emit()
         self.emit(f"// {node.fragment}{ci_suffix}")
-        self.emit("TRY_MATCH_BEGIN")
-        with self._indent_block():
+        with self._block("if (matched) {"):
             if needs_cpt:
                 self.emit("uint32_t c = _get_cpt(match_pos);")
             if needs_flags:
                 self.emit("auto f = _get_flags(match_pos);")
-        self.emit(f"TRY_MATCH_CHECK({cond})")
+            self.emit(f"matched = ({cond});")
+            self.emit("if (matched) { match_pos++; }")
 
     def _charclass_condition_inline(
         self, node: CharClass, case_insensitive: bool = False
