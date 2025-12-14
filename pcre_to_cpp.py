@@ -18,17 +18,21 @@ from typing import Union, Tuple, Optional
 # AST Node Types
 # =============================================================================
 
+
 @dataclass
 class LiteralChar:
     """A literal character to match."""
+
     char: str
 
     def __repr__(self):
         return f"Literal({self.char!r})"
 
+
 @dataclass
 class CharClass:
     """A character class like [a-z] or [^0-9]."""
+
     items: list  # List of chars, (start, end) tuples, or nested nodes
     negated: bool = False
 
@@ -36,9 +40,11 @@ class CharClass:
         neg = "^" if self.negated else ""
         return f"CharClass({neg}{self.items})"
 
+
 @dataclass
 class UnicodeCategory:
     """Unicode category like \\p{L} or \\P{N}."""
+
     category: str  # "L", "N", "P", "S", "M", "Han", etc.
     negated: bool = False
 
@@ -46,31 +52,39 @@ class UnicodeCategory:
         p = "P" if self.negated else "p"
         return f"\\{p}{{{self.category}}}"
 
+
 @dataclass
 class Predefined:
     """Predefined character class like \\s, \\d, \\w."""
+
     name: str  # "s", "S", "d", "D", "w", "W"
 
     def __repr__(self):
         return f"\\{self.name}"
 
+
 @dataclass
 class SpecialChar:
     """Special character like \\r, \\n, \\t."""
+
     char: str  # The actual character value
 
     def __repr__(self):
         return f"Special({self.char!r})"
 
+
 @dataclass
 class AnyChar:
     """Matches any character (.)"""
+
     pass
+
 
 @dataclass
 class Quantifier:
     """Quantifier applied to a node."""
-    child: 'Node'
+
+    child: "Node"
     min_count: int
     max_count: int  # -1 means unlimited
     greedy: bool = True
@@ -96,26 +110,32 @@ class Quantifier:
             q += "?"
         return f"Quantifier({self.child}, {q})"
 
+
 @dataclass
 class Alternation:
     """Alternation of patterns (a|b|c)."""
+
     alternatives: list
 
     def __repr__(self):
         return f"Alt({self.alternatives})"
 
+
 @dataclass
 class Sequence:
     """Sequence of patterns (abc)."""
+
     children: list
 
     def __repr__(self):
         return f"Seq({self.children})"
 
+
 @dataclass
 class GroupNode:
     """A group (capturing or non-capturing)."""
-    child: 'Node'
+
+    child: "Node"
     capturing: bool = False
     case_insensitive: bool = False
 
@@ -127,28 +147,43 @@ class GroupNode:
             flags.append("i")
         return f"Group({''.join(flags)}{self.child})"
 
+
 @dataclass
 class Lookahead:
     """Lookahead assertion (?=...) or (?!...)."""
-    child: 'Node'
+
+    child: "Node"
     positive: bool  # True = (?=...), False = (?!...)
 
     def __repr__(self):
         op = "=" if self.positive else "!"
         return f"Lookahead({op}{self.child})"
 
+
 @dataclass
 class Anchor:
     """Anchor like ^ or $."""
+
     type: str  # "start", "end"
 
     def __repr__(self):
         return f"Anchor({self.type})"
 
+
 # Type alias for all node types
 Node = Union[
-    LiteralChar, CharClass, UnicodeCategory, Predefined, SpecialChar,
-    AnyChar, Quantifier, Alternation, Sequence, GroupNode, Lookahead, Anchor
+    LiteralChar,
+    CharClass,
+    UnicodeCategory,
+    Predefined,
+    SpecialChar,
+    AnyChar,
+    Quantifier,
+    Alternation,
+    Sequence,
+    GroupNode,
+    Lookahead,
+    Anchor,
 ]
 
 
@@ -180,11 +215,13 @@ def nodes_equal(a: Node, b: Node) -> bool:
                 return False
         return True
     if isinstance(a, Quantifier) and isinstance(b, Quantifier):
-        return (a.min_count == b.min_count and
-                a.max_count == b.max_count and
-                a.greedy == b.greedy and
-                a.possessive == b.possessive and
-                nodes_equal(a.child, b.child))
+        return (
+            a.min_count == b.min_count
+            and a.max_count == b.max_count
+            and a.greedy == b.greedy
+            and a.possessive == b.possessive
+            and nodes_equal(a.child, b.child)
+        )
     if isinstance(a, Sequence) and isinstance(b, Sequence):
         if len(a.children) != len(b.children):
             return False
@@ -194,9 +231,11 @@ def nodes_equal(a: Node, b: Node) -> bool:
             return False
         return all(nodes_equal(x, y) for x, y in zip(a.alternatives, b.alternatives))
     if isinstance(a, GroupNode) and isinstance(b, GroupNode):
-        return (a.capturing == b.capturing and
-                a.case_insensitive == b.case_insensitive and
-                nodes_equal(a.child, b.child))
+        return (
+            a.capturing == b.capturing
+            and a.case_insensitive == b.case_insensitive
+            and nodes_equal(a.child, b.child)
+        )
     if isinstance(a, Lookahead) and isinstance(b, Lookahead):
         return a.positive == b.positive and nodes_equal(a.child, b.child)
     return False
@@ -205,6 +244,7 @@ def nodes_equal(a: Node, b: Node) -> bool:
 # =============================================================================
 # AST Optimizer
 # =============================================================================
+
 
 class ASTOptimizer:
     """Optimizes regex AST before code generation."""
@@ -237,8 +277,10 @@ class ASTOptimizer:
 
     def _transform_children(self, node: Node) -> Node:
         """Recursively transform children of a node."""
-        if isinstance(node, (LiteralChar, SpecialChar, Predefined,
-                             UnicodeCategory, AnyChar, Anchor)):
+        if isinstance(
+            node,
+            (LiteralChar, SpecialChar, Predefined, UnicodeCategory, AnyChar, Anchor),
+        ):
             return node  # Leaf nodes
 
         if isinstance(node, CharClass):
@@ -252,8 +294,13 @@ class ASTOptimizer:
             return CharClass(new_items, node.negated)
 
         if isinstance(node, Quantifier):
-            return Quantifier(self._transform(node.child),
-                              node.min_count, node.max_count, node.greedy, node.possessive)
+            return Quantifier(
+                self._transform(node.child),
+                node.min_count,
+                node.max_count,
+                node.greedy,
+                node.possessive,
+            )
 
         if isinstance(node, Sequence):
             return Sequence([self._transform(c) for c in node.children])
@@ -262,8 +309,9 @@ class ASTOptimizer:
             return Alternation([self._transform(a) for a in node.alternatives])
 
         if isinstance(node, GroupNode):
-            return GroupNode(self._transform(node.child),
-                             node.capturing, node.case_insensitive)
+            return GroupNode(
+                self._transform(node.child), node.capturing, node.case_insensitive
+            )
 
         if isinstance(node, Lookahead):
             return Lookahead(self._transform(node.child), node.positive)
@@ -361,6 +409,7 @@ class ASTOptimizer:
 # Hand-written Recursive Descent Parser
 # =============================================================================
 
+
 class PCREParser:
     """
     Recursive descent parser for a subset of PCRE patterns.
@@ -386,7 +435,9 @@ class PCREParser:
     def parse(self) -> Node:
         result = self._parse_alternation()
         if self.pos < self.length:
-            raise ValueError(f"Unexpected character at position {self.pos}: {self.pattern[self.pos]!r}")
+            raise ValueError(
+                f"Unexpected character at position {self.pos}: {self.pattern[self.pos]!r}"
+            )
         return result
 
     def _peek(self, offset: int = 0) -> Optional[str]:
@@ -399,7 +450,7 @@ class PCREParser:
         self.pos += count
 
     def _match(self, s: str) -> bool:
-        if self.pattern[self.pos:self.pos + len(s)] == s:
+        if self.pattern[self.pos : self.pos + len(s)] == s:
             self.pos += len(s)
             return True
         return False
@@ -412,7 +463,7 @@ class PCREParser:
         """Parse alternation: sequence ('|' sequence)*"""
         alternatives = [self._parse_sequence()]
 
-        while self._peek() == '|':
+        while self._peek() == "|":
             self._advance()
             alternatives.append(self._parse_sequence())
 
@@ -426,7 +477,7 @@ class PCREParser:
 
         while self.pos < self.length:
             # Stop at alternation or group end
-            if self._peek() in ('|', ')') or self._peek() is None:
+            if self._peek() in ("|", ")") or self._peek() is None:
                 break
 
             term = self._parse_term()
@@ -462,36 +513,36 @@ class PCREParser:
             return None
 
         # Character class
-        if ch == '[':
+        if ch == "[":
             return self._parse_charclass()
 
         # Group
-        if ch == '(':
+        if ch == "(":
             return self._parse_group()
 
         # Escape sequence
-        if ch == '\\':
+        if ch == "\\":
             return self._parse_escape()
 
         # Any character
-        if ch == '.':
+        if ch == ".":
             self._advance()
             return AnyChar()
 
         # Anchors
-        if ch == '^':
+        if ch == "^":
             self._advance()
             return Anchor("start")
-        if ch == '$':
+        if ch == "$":
             self._advance()
             return Anchor("end")
 
         # Special characters that end atoms
-        if ch in '|)':
+        if ch in "|)":
             return None
 
         # Quantifiers shouldn't appear here
-        if ch in '*+?{':
+        if ch in "*+?{":
             return None
 
         # Literal character
@@ -500,42 +551,42 @@ class PCREParser:
 
     def _parse_escape(self) -> Node:
         """Parse escape sequence."""
-        self._expect('\\')
+        self._expect("\\")
         ch = self._peek()
 
         if ch is None:
             raise ValueError("Unexpected end of pattern after backslash")
 
         # Unicode category: \p{...} or \P{...}
-        if ch in 'pP':
-            negated = (ch == 'P')
+        if ch in "pP":
+            negated = ch == "P"
             self._advance()
-            self._expect('{')
+            self._expect("{")
 
             # Read category name
             cat_start = self.pos
-            while self._peek() and self._peek() != '}':
+            while self._peek() and self._peek() != "}":
                 self._advance()
-            category = self.pattern[cat_start:self.pos]
-            self._expect('}')
+            category = self.pattern[cat_start : self.pos]
+            self._expect("}")
 
             return UnicodeCategory(category, negated)
 
         # Predefined classes
-        if ch in 'sSwWdD':
+        if ch in "sSwWdD":
             self._advance()
             return Predefined(ch)
 
         # Special escapes
-        escape_map = {'r': '\r', 'n': '\n', 't': '\t'}
+        escape_map = {"r": "\r", "n": "\n", "t": "\t"}
         if ch in escape_map:
             self._advance()
             return SpecialChar(escape_map[ch])
 
         # Hex escape: \xNN
-        if ch == 'x':
+        if ch == "x":
             self._advance()
-            hex_digits = self.pattern[self.pos:self.pos + 2]
+            hex_digits = self.pattern[self.pos : self.pos + 2]
             if len(hex_digits) != 2:
                 raise ValueError(f"Invalid hex escape at position {self.pos}")
             self._advance(2)
@@ -547,20 +598,20 @@ class PCREParser:
 
     def _parse_charclass(self) -> CharClass:
         """Parse character class: [...]"""
-        self._expect('[')
+        self._expect("[")
 
         negated = False
-        if self._peek() == '^':
+        if self._peek() == "^":
             negated = True
             self._advance()
 
         items = []
 
-        while self._peek() and self._peek() != ']':
+        while self._peek() and self._peek() != "]":
             item = self._parse_cc_item()
 
             # Check for range
-            if self._peek() == '-' and self._peek(1) not in (']', None):
+            if self._peek() == "-" and self._peek(1) not in ("]", None):
                 self._advance()  # consume '-'
                 end_item = self._parse_cc_item()
 
@@ -573,19 +624,19 @@ class PCREParser:
                 else:
                     # Can't make a range, add separately
                     items.append(item)
-                    items.append(LiteralChar('-'))
+                    items.append(LiteralChar("-"))
                     items.append(end_item)
             else:
                 items.append(item)
 
-        self._expect(']')
+        self._expect("]")
         return CharClass(items, negated)
 
     def _parse_cc_item(self) -> Node:
         """Parse a single item in a character class."""
         ch = self._peek()
 
-        if ch == '\\':
+        if ch == "\\":
             return self._parse_escape()
 
         self._advance()
@@ -601,92 +652,94 @@ class PCREParser:
 
     def _parse_group(self) -> Node:
         """Parse group: (...) with various modifiers."""
-        self._expect('(')
+        self._expect("(")
 
         # Check for special group types
-        if self._peek() == '?':
+        if self._peek() == "?":
             self._advance()
             modifier = self._peek()
 
-            if modifier == ':':
+            if modifier == ":":
                 # Non-capturing: (?:...)
                 self._advance()
                 child = self._parse_alternation()
-                self._expect(')')
+                self._expect(")")
                 return GroupNode(child, capturing=False)
 
-            elif modifier == 'i':
+            elif modifier == "i":
                 # Case-insensitive: (?i:...)
                 self._advance()
-                self._expect(':')
+                self._expect(":")
                 child = self._parse_alternation()
-                self._expect(')')
+                self._expect(")")
                 return GroupNode(child, capturing=False, case_insensitive=True)
 
-            elif modifier == '=':
+            elif modifier == "=":
                 # Positive lookahead: (?=...)
                 self._advance()
                 child = self._parse_alternation()
-                self._expect(')')
+                self._expect(")")
                 return Lookahead(child, positive=True)
 
-            elif modifier == '!':
+            elif modifier == "!":
                 # Negative lookahead: (?!...)
                 self._advance()
                 child = self._parse_alternation()
-                self._expect(')')
+                self._expect(")")
                 return Lookahead(child, positive=False)
 
-            elif modifier == '<':
+            elif modifier == "<":
                 # Lookbehind - not supported
                 raise ValueError(f"Lookbehind is not supported (position {self.pos})")
 
             else:
-                raise ValueError(f"Unknown group modifier '?{modifier}' at position {self.pos}")
+                raise ValueError(
+                    f"Unknown group modifier '?{modifier}' at position {self.pos}"
+                )
 
         # Capturing group
         child = self._parse_alternation()
-        self._expect(')')
+        self._expect(")")
         return GroupNode(child, capturing=True)
 
     def _parse_quantifier(self) -> Optional[Tuple[int, int, bool, bool]]:
         """Parse quantifier: *, +, ?, {n}, {n,}, {n,m} with optional lazy (?) or possessive (+)"""
         ch = self._peek()
 
-        if ch == '*':
+        if ch == "*":
             self._advance()
             greedy, possessive = self._parse_quantifier_modifier()
             return (0, -1, greedy, possessive)
 
-        if ch == '+':
+        if ch == "+":
             self._advance()
             greedy, possessive = self._parse_quantifier_modifier()
             return (1, -1, greedy, possessive)
 
-        if ch == '?':
+        if ch == "?":
             self._advance()
             greedy, possessive = self._parse_quantifier_modifier()
             return (0, 1, greedy, possessive)
 
-        if ch == '{':
+        if ch == "{":
             self._advance()
 
             # Parse min
             min_start = self.pos
             while self._peek() and self._peek().isdigit():
                 self._advance()
-            min_val = int(self.pattern[min_start:self.pos])
+            min_val = int(self.pattern[min_start : self.pos])
 
-            if self._peek() == '}':
+            if self._peek() == "}":
                 # {n}
                 self._advance()
                 greedy, possessive = self._parse_quantifier_modifier()
                 return (min_val, min_val, greedy, possessive)
 
-            if self._peek() == ',':
+            if self._peek() == ",":
                 self._advance()
 
-                if self._peek() == '}':
+                if self._peek() == "}":
                     # {n,}
                     self._advance()
                     greedy, possessive = self._parse_quantifier_modifier()
@@ -696,9 +749,9 @@ class PCREParser:
                 max_start = self.pos
                 while self._peek() and self._peek().isdigit():
                     self._advance()
-                max_val = int(self.pattern[max_start:self.pos])
+                max_val = int(self.pattern[max_start : self.pos])
 
-                self._expect('}')
+                self._expect("}")
                 greedy, possessive = self._parse_quantifier_modifier()
                 return (min_val, max_val, greedy, possessive)
 
@@ -712,10 +765,10 @@ class PCREParser:
         Returns:
             Tuple of (greedy, possessive)
         """
-        if self._peek() == '?':
+        if self._peek() == "?":
             self._advance()
             return (False, False)  # lazy: not greedy, not possessive
-        elif self._peek() == '+':
+        elif self._peek() == "+":
             self._advance()
             return (True, True)  # possessive: greedy, possessive
         return (True, False)  # default: greedy, not possessive
@@ -726,9 +779,11 @@ def parse_pcre(pattern: str) -> Node:
     parser = PCREParser(pattern)
     return parser.parse()
 
+
 # =============================================================================
 # C++ Code Emitter
 # =============================================================================
+
 
 class CppEmitter:
     """Generates C++ code from a parsed PCRE AST."""
@@ -757,7 +812,7 @@ class CppEmitter:
         code = textwrap.dedent(template).strip()
         if vars:
             code = Template(code).safe_substitute(vars)
-        for line in code.split('\n'):
+        for line in code.split("\n"):
             self._emit(line)
 
     @contextmanager
@@ -802,13 +857,13 @@ class CppEmitter:
             self._emit(f"//   {pattern}")
             self._emit("//")
         self._emit("")
-        self._emit_block('''
+        self._emit_block("""
             #include "unicode.h"
 
             #include <string>
             #include <vector>
             #include <cstdint>
-        ''')
+        """)
 
         # Function documentation
         self._emit("/**")
@@ -834,8 +889,12 @@ class CppEmitter:
             # Emit shared backtracking stack if needed
             if self.uses_backtracking:
                 self._emit("")
-                self._emit("// Pre-allocated backtracking stack for quantifier matching")
-                self._emit("// Uses a single vector with base-index tracking to avoid per-match allocations")
+                self._emit(
+                    "// Pre-allocated backtracking stack for quantifier matching"
+                )
+                self._emit(
+                    "// Uses a single vector with base-index tracking to avoid per-match allocations"
+                )
                 self._emit("std::vector<size_t> stack;")
                 self._emit("stack.reserve(cpts.size() * 2);")
 
@@ -852,34 +911,52 @@ class CppEmitter:
                 self._emit("// Sentinel value for out-of-bounds codepoint access")
                 self._emit("static const uint32_t OUT_OF_RANGE = 0xFFFFFFFF;")
                 self._emit("")
-                self._emit("// Helper: Get codepoint at position (returns OUT_OF_RANGE if outside chunk)")
+                self._emit(
+                    "// Helper: Get codepoint at position (returns OUT_OF_RANGE if outside chunk)"
+                )
 
-                with self._block("auto _get_cpt = [&](const size_t pos) -> uint32_t {", "};"):
-                    self._emit("return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;")
+                with self._block(
+                    "auto _get_cpt = [&](const size_t pos) -> uint32_t {", "};"
+                ):
+                    self._emit(
+                        "return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;"
+                    )
                 self._emit("")
 
                 self._emit("// Helper: Get Unicode flags for codepoint at position")
-                with self._block("auto _get_flags = [&](const size_t pos) -> unicode_cpt_flags {", "};"):
-                    self._emit("return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};")
+                with self._block(
+                    "auto _get_flags = [&](const size_t pos) -> unicode_cpt_flags {",
+                    "};",
+                ):
+                    self._emit(
+                        "return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};"
+                    )
                 self._emit("")
 
                 self._emit("// Helper: Emit a token from _prev_end to 'end'")
                 self._emit("size_t _prev_end = offset_ini;")
-                with self._block("auto _add_token = [&](const size_t end) -> size_t {", "};"):
-                    self._emit_block('''
+                with self._block(
+                    "auto _add_token = [&](const size_t end) -> size_t {", "};"
+                ):
+                    self._emit_block("""
                         size_t len = end - _prev_end;
                         if (len > 0) {
                             bpe_offsets.push_back(len);
                         }
                         _prev_end = end;
                         return len;
-                    ''')
+                    """)
                 self._emit("")
 
-                self._emit("// Helper: Try to match at current position using predicate")
+                self._emit(
+                    "// Helper: Try to match at current position using predicate"
+                )
                 self._emit("// Returns true and advances mpos if condition is met")
-                with self._block("auto _try_match = [&](size_t& mpos, bool& mflag, auto condition) -> bool {", "};"):
-                    self._emit_block('''
+                with self._block(
+                    "auto _try_match = [&](size_t& mpos, bool& mflag, auto condition) -> bool {",
+                    "};",
+                ):
+                    self._emit_block("""
                         if (!mflag) return false;
                         if (condition()) {
                             mpos++;
@@ -887,29 +964,43 @@ class CppEmitter:
                         }
                         mflag = false;
                         return false;
-                    ''')
+                    """)
                 self._emit("")
 
                 # Emit stack helpers if backtracking is needed
                 if self.uses_backtracking:
                     self._emit("// Stack helpers for backtracking")
-                    self._emit("auto _stack_mark = [&]() -> size_t { return stack.size(); };")
-                    self._emit("auto _stack_push = [&](size_t p) { stack.push_back(p); };")
-                    self._emit("auto _stack_count = [&](size_t base) -> size_t { return stack.size() - base; };")
-                    self._emit("auto _stack_get = [&](size_t base, size_t idx) -> size_t { return stack[base + idx - 1]; };")
-                    self._emit("auto _stack_restore = [&](size_t base) { stack.resize(base); };")
+                    self._emit(
+                        "auto _stack_mark = [&]() -> size_t { return stack.size(); };"
+                    )
+                    self._emit(
+                        "auto _stack_push = [&](size_t p) { stack.push_back(p); };"
+                    )
+                    self._emit(
+                        "auto _stack_count = [&](size_t base) -> size_t { return stack.size() - base; };"
+                    )
+                    self._emit(
+                        "auto _stack_get = [&](size_t base, size_t idx) -> size_t { return stack[base + idx - 1]; };"
+                    )
+                    self._emit(
+                        "auto _stack_restore = [&](size_t base) { stack.resize(base); };"
+                    )
                     self._emit("")
 
                 self._emit("// =======================================================")
                 self._emit("// Main matching loop")
                 self._emit("// Try each alternative in order. First match wins.")
-                self._emit("// On match: emit token boundary and continue from new position.")
+                self._emit(
+                    "// On match: emit token boundary and continue from new position."
+                )
                 self._emit("// On no match: consume single character as fallback.")
                 self._emit("// =======================================================")
                 with self._block("for (size_t pos = offset_ini; pos < offset_end; ) {"):
                     self._generate_match(ast)
                     self._emit("")
-                    self._emit("// No alternative matched - emit single character as token")
+                    self._emit(
+                        "// No alternative matched - emit single character as token"
+                    )
                     self._emit("_add_token(++pos);")
 
             self._emit("")
@@ -932,10 +1023,10 @@ class CppEmitter:
         self._emit(f"// Alternative: {pattern}")
 
         with self._block():
-            self._emit_block('''
+            self._emit_block("""
                 size_t match_pos = pos;
                 bool matched = true;
-            ''')
+            """)
 
             # Generate matching for this alternative
             if isinstance(ast, Sequence):
@@ -943,14 +1034,14 @@ class CppEmitter:
             else:
                 self._generate_node_match(ast)
 
-            self._emit_block('''
+            self._emit_block("""
 
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
-            ''')
+            """)
 
     def _generate_node_match(self, node: Node, case_insensitive: bool = False):
         """Generate matching code for a single node."""
@@ -982,24 +1073,36 @@ class CppEmitter:
         else:
             raise ValueError(f"Unsupported node type: {type(node)}")
 
-    def _generate_literal_match(self, node: LiteralChar, case_insensitive: bool = False):
+    def _generate_literal_match(
+        self, node: LiteralChar, case_insensitive: bool = False
+    ):
         char_code = ord(node.char)
         char_desc = self._char_description(node.char)
 
         if case_insensitive and node.char.isalpha():
             char_lower = ord(node.char.lower())
-            self._emit(f"_try_match(match_pos, matched, [&]{{ return unicode_tolower(_get_cpt(match_pos)) == {char_lower}; }}); // {char_desc} (case-insensitive)")
+            self._emit(
+                f"_try_match(match_pos, matched, [&]{{ return unicode_tolower(_get_cpt(match_pos)) == {char_lower}; }}); // {char_desc} (case-insensitive)"
+            )
         else:
-            self._emit(f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}")
+            self._emit(
+                f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}"
+            )
 
     def _generate_special_match(self, node: SpecialChar):
         char_code = ord(node.char)
         char_desc = self._char_description(node.char)
-        self._emit(f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}")
+        self._emit(
+            f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}"
+        )
 
-    def _generate_charclass_match(self, node: CharClass, case_insensitive: bool = False):
+    def _generate_charclass_match(
+        self, node: CharClass, case_insensitive: bool = False
+    ):
         """Generate match for character class."""
-        needs_cpt, needs_flags, cond = self._charclass_condition_inline(node, case_insensitive)
+        needs_cpt, needs_flags, cond = self._charclass_condition_inline(
+            node, case_insensitive
+        )
         pattern = self._ast_to_pattern(node)
         ci_suffix = " (case-insensitive)" if case_insensitive else ""
 
@@ -1014,7 +1117,9 @@ class CppEmitter:
             self._emit(f"return {cond};")
         self._emit("});")
 
-    def _charclass_condition_inline(self, node: CharClass, case_insensitive: bool = False) -> tuple:
+    def _charclass_condition_inline(
+        self, node: CharClass, case_insensitive: bool = False
+    ) -> tuple:
         """Generate inline condition for character class.
 
         Returns:
@@ -1030,7 +1135,9 @@ class CppEmitter:
                 start, end = item
                 needs_cpt = True
                 if case_insensitive and start.isalpha() and end.isalpha():
-                    conditions.append(f"(unicode_tolower(c) >= {ord(start.lower())} && unicode_tolower(c) <= {ord(end.lower())})")
+                    conditions.append(
+                        f"(unicode_tolower(c) >= {ord(start.lower())} && unicode_tolower(c) <= {ord(end.lower())})"
+                    )
                 else:
                     conditions.append(f"(c >= {ord(start)} && c <= {ord(end)})")
             elif isinstance(item, LiteralChar):
@@ -1046,14 +1153,20 @@ class CppEmitter:
                 needs_flags = True
                 if item.category == "Han":
                     needs_cpt = True
-                    cond = "unicode_cpt_is_han(c)" if not item.negated else "!unicode_cpt_is_han(c)"
+                    cond = (
+                        "unicode_cpt_is_han(c)"
+                        if not item.negated
+                        else "!unicode_cpt_is_han(c)"
+                    )
                 else:
                     cond = self._unicode_cat_flags_condition(item)
                 conditions.append(cond)
                 self.required_helpers.add(item.category)
             elif isinstance(item, Predefined):
                 needs_flags = True
-                needs_cpt = True  # Some predefined classes use cpt (e.g., \w checks for '_')
+                needs_cpt = (
+                    True  # Some predefined classes use cpt (e.g., \w checks for '_')
+                )
                 cond = self._predefined_flags_condition(item)
                 conditions.append(cond)
             elif isinstance(item, str):
@@ -1130,7 +1243,9 @@ class CppEmitter:
         """Generate match for Unicode category."""
         cond = self._unicode_cat_condition_inline(node)
         pattern = self._ast_to_pattern(node)
-        self._emit(f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // {pattern}")
+        self._emit(
+            f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // {pattern}"
+        )
 
     def _unicode_cat_condition_inline(self, node: UnicodeCategory) -> str:
         """Generate inline condition for Unicode category using match_pos."""
@@ -1174,7 +1289,9 @@ class CppEmitter:
     def _generate_predefined_match(self, node: Predefined):
         """Generate match for predefined class."""
         cond = self._predefined_condition_inline(node)
-        self._emit(f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // \\{node.name}")
+        self._emit(
+            f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // \\{node.name}"
+        )
 
     def _predefined_condition_inline(self, node: Predefined) -> str:
         """Generate inline condition for predefined class using match_pos."""
@@ -1193,9 +1310,13 @@ class CppEmitter:
 
     def _generate_any_match(self):
         """Generate match for any character."""
-        self._emit("_try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) != OUT_OF_RANGE; }); // .")
+        self._emit(
+            "_try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) != OUT_OF_RANGE; }); // ."
+        )
 
-    def _generate_quantifier_match(self, node: Quantifier, case_insensitive: bool = False):
+    def _generate_quantifier_match(
+        self, node: Quantifier, case_insensitive: bool = False
+    ):
         """Generate match for quantifier."""
         min_c = node.min_count
         max_c = node.max_count
@@ -1220,17 +1341,17 @@ class CppEmitter:
         """Generate match for optional (?)."""
         self._emit("// Optional match")
         with self._block():
-            self._emit_block('''
+            self._emit_block("""
                 size_t save_pos = match_pos;
                 bool save_matched = matched;
-            ''')
+            """)
             self._generate_node_match(child, case_insensitive)
-            self._emit_block('''
+            self._emit_block("""
                 if (!matched) {
                     match_pos = save_pos;
                     matched = save_matched;
                 }
-            ''')
+            """)
 
     def _generate_star_match(self, child: Node, case_insensitive: bool = False):
         """Generate match for zero or more (*)."""
@@ -1238,13 +1359,13 @@ class CppEmitter:
         with self._block("while (matched) {"):
             self._emit("size_t save_pos = match_pos;")
             self._generate_node_match(child, case_insensitive)
-            self._emit_block('''
+            self._emit_block("""
                 if (!matched || match_pos == save_pos) {
                     match_pos = save_pos;
                     matched = true;
                     break;
                 }
-            ''')
+            """)
 
     def _generate_plus_match(self, child: Node, case_insensitive: bool = False):
         """Generate match for one or more (+)."""
@@ -1254,16 +1375,18 @@ class CppEmitter:
             with self._block("while (matched) {"):
                 self._emit("size_t save_pos = match_pos;")
                 self._generate_node_match(child, case_insensitive)
-                self._emit_block('''
+                self._emit_block("""
                     if (!matched || match_pos == save_pos) {
                         match_pos = save_pos;
                         matched = (count > 0);
                         break;
                     }
                     count++;
-                ''')
+                """)
 
-    def _generate_exact_match(self, child: Node, exact_count: int, case_insensitive: bool = False):
+    def _generate_exact_match(
+        self, child: Node, exact_count: int, case_insensitive: bool = False
+    ):
         """Generate match for exact count {n}."""
         self._emit(f"// Exact {exact_count} matches")
         with self._block():
@@ -1273,7 +1396,9 @@ class CppEmitter:
                 self._emit("if (matched) count++;")
             self._emit(f"if (count < {exact_count}) matched = false;")
 
-    def _generate_range_match(self, child: Node, min_c: int, max_c: int, case_insensitive: bool = False):
+    def _generate_range_match(
+        self, child: Node, min_c: int, max_c: int, case_insensitive: bool = False
+    ):
         """Generate match for range {n,m}."""
         if max_c == -1:
             self._emit(f"// {min_c} or more matches")
@@ -1282,14 +1407,17 @@ class CppEmitter:
                 with self._block("while (matched) {"):
                     self._emit("size_t save_pos = match_pos;")
                     self._generate_node_match(child, case_insensitive)
-                    self._emit_block('''
+                    self._emit_block(
+                        """
                         if (!matched || match_pos == save_pos) {
                             match_pos = save_pos;
                             matched = (count >= $min_c);
                             break;
                         }
                         count++;
-                    ''', locals())
+                    """,
+                        locals(),
+                    )
         else:
             self._emit(f"// {min_c} to {max_c} matches")
             with self._block():
@@ -1297,14 +1425,17 @@ class CppEmitter:
                 with self._block(f"while (matched && count < {max_c}) {{"):
                     self._emit("size_t save_pos = match_pos;")
                     self._generate_node_match(child, case_insensitive)
-                    self._emit_block('''
+                    self._emit_block(
+                        """
                         if (!matched || match_pos == save_pos) {
                             match_pos = save_pos;
                             matched = (count >= $min_c);
                             break;
                         }
                         count++;
-                    ''', locals())
+                    """,
+                        locals(),
+                    )
                 self._emit(f"if (count < {min_c}) matched = false;")
 
     def _generate_group_match(self, node: GroupNode):
@@ -1316,16 +1447,18 @@ class CppEmitter:
             # Just match the child
             self._generate_node_match(node.child)
 
-    def _generate_lookahead_match(self, node: Lookahead, case_insensitive: bool = False):
+    def _generate_lookahead_match(
+        self, node: Lookahead, case_insensitive: bool = False
+    ):
         """Generate lookahead assertion."""
-        lookahead_type = 'Positive' if node.positive else 'Negative'
+        lookahead_type = "Positive" if node.positive else "Negative"
         self._emit(f"// {lookahead_type} lookahead")
 
         with self._block():
-            self._emit_block('''
+            self._emit_block("""
                 size_t save_match_pos = match_pos;
                 bool save_matched = matched;
-            ''')
+            """)
 
             self._generate_node_match(node.child, case_insensitive)
 
@@ -1363,7 +1496,9 @@ class CppEmitter:
         if isinstance(node, GroupNode):
             return self._contains_backtracking_quantifier(node.child)
         if isinstance(node, Alternation):
-            return any(self._contains_backtracking_quantifier(a) for a in node.alternatives)
+            return any(
+                self._contains_backtracking_quantifier(a) for a in node.alternatives
+            )
         return False
 
     def _needs_backtracking(self, children: list) -> bool:
@@ -1375,14 +1510,28 @@ class CppEmitter:
         has_backtracking_quantifier = False
         for i, child in enumerate(children):
             # Check if this child is a non-possessive quantifier
-            is_backtracking_quant = (isinstance(child, Quantifier) and not child.possessive) or \
-                       (isinstance(child, GroupNode) and self._contains_backtracking_quantifier(child.child))
+            is_backtracking_quant = (
+                isinstance(child, Quantifier) and not child.possessive
+            ) or (
+                isinstance(child, GroupNode)
+                and self._contains_backtracking_quantifier(child.child)
+            )
 
             # Check BEFORE updating has_backtracking_quantifier
             if has_backtracking_quantifier:
                 # Something after a non-possessive quantifier - might need backtracking
-                if isinstance(child, (Lookahead, LiteralChar, CharClass, Predefined,
-                                      UnicodeCategory, SpecialChar, AnyChar)):
+                if isinstance(
+                    child,
+                    (
+                        Lookahead,
+                        LiteralChar,
+                        CharClass,
+                        Predefined,
+                        UnicodeCategory,
+                        SpecialChar,
+                        AnyChar,
+                    ),
+                ):
                     return True
                 if isinstance(child, GroupNode):
                     return True
@@ -1404,7 +1553,9 @@ class CppEmitter:
             for child in children:
                 self._generate_node_match(child, case_insensitive)
 
-    def _generate_sequence_with_backtracking(self, children: list, case_insensitive: bool = False):
+    def _generate_sequence_with_backtracking(
+        self, children: list, case_insensitive: bool = False
+    ):
         """Generate sequence matching with stack-based backtracking.
 
         Strategy: Use shared stack with base index tracking.
@@ -1429,7 +1580,9 @@ class CppEmitter:
 
         num_quants = len(quantifier_indices)
 
-        self._emit(f"// Sequence with backtracking ({num_quants} quantifiers): {pattern_str}")
+        self._emit(
+            f"// Sequence with backtracking ({num_quants} quantifiers): {pattern_str}"
+        )
         with self._block():
             self._emit("bool seq_matched = false;")
             self._emit("size_t bt_base = _stack_mark();  // Save stack state")
@@ -1457,8 +1610,13 @@ class CppEmitter:
             self._emit("_stack_restore(bt_base);  // Restore stack state")
             self._emit("matched = seq_matched;")
 
-    def _generate_stack_based_backtracking(self, children: list, quant_indices: list,
-                                            quant_num: int, case_insensitive: bool):
+    def _generate_stack_based_backtracking(
+        self,
+        children: list,
+        quant_indices: list,
+        quant_num: int,
+        case_insensitive: bool,
+    ):
         """Generate stack-based nested loops for multiple quantifiers.
 
         Uses shared stack with base index tracking instead of per-quantifier vectors.
@@ -1487,37 +1645,45 @@ class CppEmitter:
             else:
                 loop_cond = f"while (_stack_count({base_name}) <= {max_c}) {{"
             with self._block(loop_cond):
-                self._emit_block('''
+                self._emit_block("""
                     size_t save_pos = match_pos;
                     matched = true;
-                ''')
+                """)
                 self._generate_node_match(quant.child, case_insensitive)
-                self._emit_block('''
+                self._emit_block("""
                     if (matched && match_pos > save_pos) {
                         _stack_push(match_pos);
                     } else {
                         match_pos = save_pos;
                         break;
                     }
-                ''')
+                """)
         self._emit(f"size_t {count_name} = _stack_count({base_name});")
         self._emit("")
 
         # Loop through positions - direction depends on greedy vs lazy
         if greedy:
             # Greedy: try longest match first, backtrack to shorter
-            self._emit(f"// Try quantifier {quant_num} positions longest-first (greedy, min_count={min_c})")
+            self._emit(
+                f"// Try quantifier {quant_num} positions longest-first (greedy, min_count={min_c})"
+            )
             loop_header = f"for (size_t i{quant_num} = {count_name}; i{quant_num} > {min_c}; i{quant_num}--) {{"
         else:
             # Lazy: try shortest match first, extend if needed
-            self._emit(f"// Try quantifier {quant_num} positions shortest-first (lazy, min_count={min_c})")
+            self._emit(
+                f"// Try quantifier {quant_num} positions shortest-first (lazy, min_count={min_c})"
+            )
             loop_header = f"for (size_t i{quant_num} = {min_c} + 1; i{quant_num} <= {count_name}; i{quant_num}++) {{"
         with self._block(loop_header):
             self._emit(f"match_pos = _stack_get({base_name}, i{quant_num});")
             self._emit("matched = true;")
 
             # Find elements between this quantifier and the next (or end)
-            next_quant_idx = quant_indices[quant_num + 1] if quant_num + 1 < len(quant_indices) else len(children)
+            next_quant_idx = (
+                quant_indices[quant_num + 1]
+                if quant_num + 1 < len(quant_indices)
+                else len(children)
+            )
 
             # Generate elements between quantifiers
             for i in range(quant_idx + 1, next_quant_idx):
@@ -1542,23 +1708,25 @@ class CppEmitter:
                         self._emit("")
                 self._emit("if (matched) { seq_matched = true; break; }")
 
-    def _generate_nested_alternation(self, node: Alternation, case_insensitive: bool = False):
+    def _generate_nested_alternation(
+        self, node: Alternation, case_insensitive: bool = False
+    ):
         """Generate nested alternation (within a sequence)."""
         self._emit("// Nested alternation")
         with self._block("if (matched) {"):
-            self._emit_block('''
+            self._emit_block("""
                 size_t alt_save = match_pos;
                 bool alt_matched = false;
-            ''')
+            """)
 
             for i, alt in enumerate(node.alternatives):
                 if i > 0:
                     self._emit("if (!alt_matched) {")
                     self.indent_level += 1
-                    self._emit_block('''
+                    self._emit_block("""
                         match_pos = alt_save;
                         matched = true;
-                    ''')
+                    """)
 
                 if isinstance(alt, Sequence):
                     for child in alt.children:
@@ -1576,14 +1744,14 @@ class CppEmitter:
 
     def _escape_char(self, c: str) -> str:
         """Escape character for C++ comment."""
-        if c == '\r':
-            return '\\r'
-        elif c == '\n':
-            return '\\n'
-        elif c == '\t':
-            return '\\t'
-        elif c == '\\':
-            return '\\\\'
+        if c == "\r":
+            return "\\r"
+        elif c == "\n":
+            return "\\n"
+        elif c == "\t":
+            return "\\t"
+        elif c == "\\":
+            return "\\\\"
         elif c == "'":
             return "\\'"
         return c
@@ -1644,7 +1812,7 @@ class CppEmitter:
         elif isinstance(ast, Predefined):
             return f"\\{ast.name}"
         elif isinstance(ast, SpecialChar):
-            return {'\r': '\\r', '\n': '\\n', '\t': '\\t'}.get(ast.char, repr(ast.char))
+            return {"\r": "\\r", "\n": "\\n", "\t": "\\t"}.get(ast.char, repr(ast.char))
         elif isinstance(ast, AnyChar):
             return "."
         elif isinstance(ast, Quantifier):
@@ -1700,24 +1868,19 @@ class CppEmitter:
 # Main
 # =============================================================================
 
+
 def main():
-    parser = argparse.ArgumentParser(
-        description="Convert PCRE patterns to C++ code"
+    parser = argparse.ArgumentParser(description="Convert PCRE patterns to C++ code")
+    parser.add_argument(
+        "--pattern", "-p", required=True, help="The PCRE pattern to convert"
     )
     parser.add_argument(
-        "--pattern", "-p",
+        "--name",
+        "-n",
         required=True,
-        help="The PCRE pattern to convert"
+        help="Name for the generated function (e.g., 'gpt2', 'llama3')",
     )
-    parser.add_argument(
-        "--name", "-n",
-        required=True,
-        help="Name for the generated function (e.g., 'gpt2', 'llama3')"
-    )
-    parser.add_argument(
-        "--output", "-o",
-        help="Output file (default: stdout)"
-    )
+    parser.add_argument("--output", "-o", help="Output file (default: stdout)")
 
     args = parser.parse_args()
 
@@ -1737,7 +1900,7 @@ def main():
 
     # Output
     if args.output:
-        with open(args.output, 'w') as f:
+        with open(args.output, "w") as f:
             f.write(cpp_code)
         print(f"Generated C++ code written to {args.output}")
     else:
