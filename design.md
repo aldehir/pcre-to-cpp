@@ -147,7 +147,30 @@ python pcre_to_cpp.py \
 
 ## Matching Strategy
 
-Alternatives are tried in order; first match wins. Quantifiers use simple loops when possible, or iterative backtracking when followed by lookaheads or other patterns.
+Alternatives are tried in order; first match wins. Quantifiers use simple loops when possible, with two optimized strategies for complex patterns:
+
+### Boundary Detection (Preferred)
+
+For consecutive greedy quantifiers over character classes (like `\s*[\r\n]+`), we use **boundary detection** - an O(n) algorithm that avoids backtracking entirely:
+
+1. Find the extent of the first quantifier's class (the superset)
+2. Scan backward to reserve the minimum required for each subsequent quantifier
+3. Assign each quantifier its region based on the boundaries
+
+For `\s*[\r\n]+` on `"\n \n"`:
+1. Extent of `\s` = 3 (all whitespace)
+2. Reserve min 1 `[\r\n]` from end: position 2 is `\n`, so `b1_start = 2`
+3. `\s*` gets positions 0-1 (2 chars), `[\r\n]+` gets position 2 (1 char)
+4. **Total: 3** (correct greedy semantics, no backtracking)
+
+This optimization applies when:
+- Two or more adjacent greedy quantifiers over simple character matchers
+- No lookaheads or complex patterns between them
+- The quantifiers have potentially overlapping character classes
+
+### Stack-Based Backtracking (Fallback)
+
+For patterns requiring true backtracking (e.g., with lookaheads), we use iterative backtracking:
 
 For `\s+(?!\S)` on `"  x"`:
 1. `\s+` greedily matches both spaces

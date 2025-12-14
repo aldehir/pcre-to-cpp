@@ -1351,10 +1351,14 @@ class CppEmitter:
         """Pre-scan AST to determine if any part needs backtracking.
 
         Used to decide whether to emit the shared stack declaration.
+        Note: Sequences that can use boundary detection don't need backtracking.
         """
         if isinstance(ast, Alternation):
             return any(self._ast_needs_backtracking(alt) for alt in ast.alternatives)
         elif isinstance(ast, Sequence):
+            # Check if boundary detection can be used - if so, no backtracking needed
+            if self._can_use_boundary_detection(ast.children):
+                return False
             return self._needs_backtracking(ast.children)
         elif isinstance(ast, GroupNode):
             return self._ast_needs_backtracking(ast.child)
@@ -1362,6 +1366,300 @@ class CppEmitter:
             # A lone quantifier doesn't need backtracking unless inside a sequence
             return False
         return False
+
+    # =========================================================================
+    # Boundary Detection - Backtracking-free matching for overlapping quantifiers
+    # =========================================================================
+
+    def _is_simple_char_matcher(self, node: Node) -> bool:
+        """Check if a node is a simple character matcher suitable for boundary detection.
+
+        Simple matchers are single-character patterns: literals, char classes,
+        predefined classes (\s, \d, etc.), unicode categories, special chars, or '.'.
+        """
+        return isinstance(
+            node,
+            (LiteralChar, CharClass, Predefined, UnicodeCategory, SpecialChar, AnyChar),
+        )
+
+    def _can_use_boundary_detection(self, children: list) -> bool:
+        """Check if a sequence can use boundary detection instead of backtracking.
+
+        Boundary detection works when:
+        1. We have consecutive quantifiers over simple character matchers
+        2. The quantifiers are greedy (not lazy)
+        3. The pattern ends with the quantified sequence (no complex tail)
+
+        Returns True if boundary detection can be used.
+        """
+        # Find all quantifiers and their positions
+        quant_info = []
+        for i, child in enumerate(children):
+            if isinstance(child, Quantifier) and not child.possessive:
+                if not self._is_simple_char_matcher(child.child):
+                    return False  # Complex child, can't use boundary detection
+                if not child.greedy:
+                    return False  # Lazy quantifiers need different handling
+                quant_info.append((i, child))
+
+        if len(quant_info) < 2:
+            return False  # Need at least 2 quantifiers for this optimization
+
+        # Check that quantifiers are consecutive (possibly with simple matchers between)
+        # and that the sequence ends with the last quantifier or simple matchers
+        last_quant_idx = quant_info[-1][0]
+
+        # Everything after the last quantifier must be simple or nothing
+        for i in range(last_quant_idx + 1, len(children)):
+            child = children[i]
+            if isinstance(child, Lookahead):
+                # Lookaheads after quantifiers still need backtracking
+                return False
+            if isinstance(child, (Alternation, GroupNode, Quantifier)):
+                return False
+
+        # Check that we have a "chain" of overlapping quantifiers
+        # For now, we'll be conservative: all quantifiers must be adjacent
+        # (no non-quantifier nodes between them)
+        for j in range(len(quant_info) - 1):
+            idx1 = quant_info[j][0]
+            idx2 = quant_info[j + 1][0]
+            if idx2 - idx1 != 1:
+                # There's something between the quantifiers
+                # For now, don't use boundary detection
+                return False
+
+        return True
+
+    def _generate_char_match_condition(
+        self, node: Node, pos_var: str, case_insensitive: bool = False
+    ) -> str:
+        """Generate a C++ condition expression that tests if a character matches.
+
+        Args:
+            node: The character matcher node
+            pos_var: The variable name holding the position to test
+            case_insensitive: Whether to use case-insensitive matching
+
+        Returns:
+            A C++ expression string that evaluates to true if the char matches.
+        """
+        if isinstance(node, LiteralChar):
+            char_code = ord(node.char)
+            if case_insensitive and node.char.isalpha():
+                return f"unicode_tolower(_get_cpt({pos_var})) == {ord(node.char.lower())}"
+            return f"_get_cpt({pos_var}) == {char_code}"
+
+        elif isinstance(node, SpecialChar):
+            return f"_get_cpt({pos_var}) == {ord(node.char)}"
+
+        elif isinstance(node, AnyChar):
+            return f"_get_cpt({pos_var}) != OUT_OF_RANGE"
+
+        elif isinstance(node, Predefined):
+            name = node.name
+            conditions = {
+                "s": f"_get_flags({pos_var}).is_whitespace",
+                "S": f"(!_get_flags({pos_var}).is_whitespace && _get_flags({pos_var}).as_uint())",
+                "d": f"_get_flags({pos_var}).is_number",
+                "D": f"(!_get_flags({pos_var}).is_number && _get_flags({pos_var}).as_uint())",
+                "w": f"(_get_flags({pos_var}).is_letter || _get_flags({pos_var}).is_number || _get_cpt({pos_var}) == '_')",
+                "W": f"(!(_get_flags({pos_var}).is_letter || _get_flags({pos_var}).is_number || _get_cpt({pos_var}) == '_') && _get_flags({pos_var}).as_uint())",
+            }
+            return conditions.get(name, "false")
+
+        elif isinstance(node, UnicodeCategory):
+            cat = node.category
+            cat_map = {
+                "L": f"_get_flags({pos_var}).is_letter",
+                "N": f"_get_flags({pos_var}).is_number",
+                "P": f"_get_flags({pos_var}).is_punctuation",
+                "S": f"_get_flags({pos_var}).is_symbol",
+                "M": f"_get_flags({pos_var}).is_accent_mark",
+                "Z": f"_get_flags({pos_var}).is_separator",
+                "C": f"_get_flags({pos_var}).is_control",
+                "Han": f"unicode_cpt_is_han(_get_cpt({pos_var}))",
+            }
+            cond = cat_map.get(cat, f"unicode_cpt_is_{cat.lower()}(_get_cpt({pos_var}))")
+            if node.negated:
+                return f"!({cond})"
+            return cond
+
+        elif isinstance(node, CharClass):
+            # Build condition for character class
+            conditions = []
+            for item in node.items:
+                if isinstance(item, tuple):
+                    start, end = item
+                    if case_insensitive and start.isalpha() and end.isalpha():
+                        conditions.append(
+                            f"(unicode_tolower(_get_cpt({pos_var})) >= {ord(start.lower())} && "
+                            f"unicode_tolower(_get_cpt({pos_var})) <= {ord(end.lower())})"
+                        )
+                    else:
+                        conditions.append(
+                            f"(_get_cpt({pos_var}) >= {ord(start)} && _get_cpt({pos_var}) <= {ord(end)})"
+                        )
+                elif isinstance(item, LiteralChar):
+                    if case_insensitive and item.char.isalpha():
+                        conditions.append(
+                            f"unicode_tolower(_get_cpt({pos_var})) == {ord(item.char.lower())}"
+                        )
+                    else:
+                        conditions.append(f"_get_cpt({pos_var}) == {ord(item.char)}")
+                elif isinstance(item, SpecialChar):
+                    conditions.append(f"_get_cpt({pos_var}) == {ord(item.char)}")
+                elif isinstance(item, Predefined):
+                    conditions.append(
+                        self._generate_char_match_condition(item, pos_var, case_insensitive)
+                    )
+                elif isinstance(item, UnicodeCategory):
+                    conditions.append(
+                        self._generate_char_match_condition(item, pos_var, case_insensitive)
+                    )
+
+            if not conditions:
+                return "false" if not node.negated else f"_get_cpt({pos_var}) != OUT_OF_RANGE"
+
+            combined = " || ".join(conditions)
+            if node.negated:
+                return f"(_get_cpt({pos_var}) != OUT_OF_RANGE && !({combined}))"
+            return f"({combined})"
+
+        return "false"
+
+    def _generate_sequence_with_boundary_detection(
+        self, children: list, case_insensitive: bool = False
+    ):
+        """Generate sequence matching using boundary detection (no backtracking).
+
+        Algorithm:
+        1. Find extent of first quantifier's class (the superset)
+        2. Scan backward to reserve minimum for each subsequent quantifier
+        3. First quantifier gets everything up to the first boundary
+        4. Each subsequent quantifier gets from its boundary to the next
+
+        This is O(n) with no backtracking stack needed.
+        """
+        # Collect quantifier info
+        quant_info = []  # [(index, quantifier, min_count, child_node), ...]
+        for i, child in enumerate(children):
+            if isinstance(child, Quantifier) and not child.possessive:
+                quant_info.append((i, child, child.min_count, child.child))
+
+        # Generate elements before first quantifier
+        first_quant_idx = quant_info[0][0]
+        for i in range(first_quant_idx):
+            self._generate_node_match(children[i], case_insensitive)
+
+        pattern_str = "".join(c.fragment for c in children[:5])
+        if len(children) > 5:
+            pattern_str += "..."
+
+        self.emit()
+        self.emit(
+            f"// Boundary detection for {len(quant_info)} quantifiers: {pattern_str}"
+        )
+        self.emit("// (O(n) matching without backtracking)")
+
+        with self._block("if (matched) {"):
+            # Step 1: Find extent of first quantifier (greedy match to find upper bound)
+            first_quant = quant_info[0][1]
+            first_child = quant_info[0][3]
+            first_cond = self._generate_char_match_condition(
+                first_child, "extent", case_insensitive
+            )
+
+            self.emit("size_t extent = match_pos;")
+            self.emit(f"while (extent < offset_end && {first_cond}) extent++;")
+            self.emit()
+
+            # Step 2: Scan backward to reserve minimums for each quantifier (right to left)
+            self.emit("// Reserve minimums for each quantifier (right to left)")
+            self.emit("size_t boundary_pos = extent;")
+            self.emit("bool boundary_ok = true;")
+
+            # Generate boundary variables for each quantifier
+            for j in range(len(quant_info) - 1, 0, -1):  # Reverse order, skip first
+                _, quant, min_count, child_node = quant_info[j]
+                boundary_var = f"b{j}_start"
+                child_cond = self._generate_char_match_condition(
+                    child_node, "scan_pos", case_insensitive
+                )
+
+                self.emit()
+                self.emit(f"// Reserve min {min_count} for quantifier {j}: {quant.fragment}")
+                self.emit(f"size_t {boundary_var} = boundary_pos;")
+
+                if min_count > 0:
+                    with self._block("{"):
+                        self.emit("size_t reserved = 0;")
+                        self.emit(f"size_t scan_pos = boundary_pos;")
+                        with self._block(f"while (reserved < {min_count} && scan_pos > match_pos) {{"):
+                            self.emit("scan_pos--;")
+                            self.emit(f"if ({child_cond}) {{")
+                            with self._indent_block():
+                                self.emit("reserved++;")
+                                self.emit(f"{boundary_var} = scan_pos;")
+                            self.emit("}")
+                        self.emit(f"if (reserved < {min_count}) boundary_ok = false;")
+                        self.emit(f"boundary_pos = {boundary_var};")
+                else:
+                    # min_count == 0, no reservation needed but update boundary_pos
+                    self.emit(f"// min_count=0, {boundary_var} stays at boundary_pos")
+
+            # Step 3: Verify first quantifier meets its minimum
+            first_min = quant_info[0][2]
+            if first_min > 0:
+                self.emit()
+                self.emit(f"// Verify first quantifier has at least {first_min}")
+                self.emit(
+                    f"if (boundary_pos - match_pos < {first_min}) boundary_ok = false;"
+                )
+
+            self.emit()
+            with self._block("if (boundary_ok) {"):
+                # Step 4: Assign each quantifier its region
+                self.emit("// Assign regions to quantifiers")
+
+                # First quantifier: [match_pos, b1_start)
+                if len(quant_info) > 1:
+                    self.emit(f"match_pos = b1_start;  // First quantifier consumes up to here")
+                else:
+                    self.emit("match_pos = extent;  // Only one quantifier")
+
+                # Middle quantifiers: [bN_start, bN+1_start) - but they get their reserved minimum
+                # Actually, each quantifier should greedily extend within its available region
+                # For simplicity, we'll just set boundaries and let them match
+
+                # For each subsequent quantifier, extend greedily from boundary to next boundary
+                for j in range(1, len(quant_info)):
+                    _, quant, min_count, child_node = quant_info[j]
+                    boundary_var = f"b{j}_start"
+
+                    if j < len(quant_info) - 1:
+                        next_boundary = f"b{j+1}_start"
+                    else:
+                        next_boundary = "extent"
+
+                    # The quantifier region is [boundary_var, next_boundary)
+                    # But we need to actually match greedily within this region
+                    child_cond = self._generate_char_match_condition(
+                        child_node, "match_pos", case_insensitive
+                    )
+
+                    self.emit()
+                    self.emit(f"// Quantifier {j}: {quant.fragment}")
+                    self.emit(f"// Region: [{boundary_var}, {next_boundary})")
+                    self.emit(f"while (match_pos < {next_boundary} && {child_cond}) match_pos++;")
+
+                # Generate elements after the last quantifier
+                last_quant_idx = quant_info[-1][0]
+                for i in range(last_quant_idx + 1, len(children)):
+                    self._generate_node_match(children[i], case_insensitive)
+
+            with self._block("else {"):
+                self.emit("matched = false;")
 
     def _contains_backtracking_quantifier(self, node: Node) -> bool:
         """Check if a node or its children contain non-possessive quantifiers."""
@@ -1423,7 +1721,10 @@ class CppEmitter:
 
     def _generate_sequence_match(self, children: list, case_insensitive: bool = False):
         """Generate match for a sequence, with backtracking support when needed."""
-        if self._needs_backtracking(children):
+        # Try boundary detection first (more efficient than backtracking)
+        if self._can_use_boundary_detection(children):
+            self._generate_sequence_with_boundary_detection(children, case_insensitive)
+        elif self._needs_backtracking(children):
             self._generate_sequence_with_backtracking(children, case_insensitive)
         else:
             # Simple case - no backtracking needed
