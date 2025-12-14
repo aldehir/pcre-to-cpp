@@ -788,7 +788,7 @@ def optimize(ast: Node) -> Node:
     return ASTOptimizer(ast).optimize()
 
 
-def generate_cpp(name: str, ast: Node, pattern: str = None) -> str:
+def generate_cpp(ast: Node, name: str, pattern: str = "") -> str:
     """Generate C++ code from an AST.
 
     Args:
@@ -796,7 +796,7 @@ def generate_cpp(name: str, ast: Node, pattern: str = None) -> str:
         ast: The parsed and optimized AST
         pattern: Optional original pattern string for documentation
     """
-    return CppEmitter(name, ast, pattern).generate()
+    return CppEmitter(ast, name, pattern).generate()
 
 
 # =============================================================================
@@ -807,9 +807,9 @@ def generate_cpp(name: str, ast: Node, pattern: str = None) -> str:
 class CppEmitter:
     """Generates C++ code from a parsed PCRE AST."""
 
-    def __init__(self, name: str, ast: Node, pattern: str = None):
-        self.function_name = name
+    def __init__(self, ast: Node, name: str = "custom", pattern: str = ""):
         self.ast = ast
+        self.name = name
         self.pattern = pattern
         self.indent_level = 0
         self.lines = []
@@ -863,7 +863,7 @@ class CppEmitter:
         """Generate C++ code for the AST."""
         self.lines = []
         self.uses_backtracking = self._ast_needs_backtracking(self.ast)
-        func_name = self.function_name
+        func_name = self.name
 
         # File header with original pattern
         if self.pattern:
@@ -1918,7 +1918,7 @@ def main():
     ast = optimize(ast)
 
     # Generate C++ code
-    cpp_code = generate_cpp(args.name, ast, args.pattern)
+    cpp_code = generate_cpp(ast, args.name, args.pattern)
 
     # Output
     if args.output:
