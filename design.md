@@ -25,7 +25,9 @@ alternation → sequence ('|' sequence)*
 sequence    → term+
 term        → atom quantifier?
 atom        → literal | escape | charclass | group | '.' | anchor
-quantifier  → ('*' | '+' | '?' | '{n}' | '{n,}' | '{n,m}') '?'?
+quantifier  → ('*' | '+' | '?' | '{n}' | '{n,}' | '{n,m}') modifier?
+modifier    → '?'           # lazy (shortest match first)
+            | '+'           # possessive (no backtracking)
 group       → '(' pattern ')'
             | '(?:' pattern ')'      # non-capturing
             | '(?i:' pattern ')'     # case-insensitive
@@ -45,7 +47,7 @@ UnicodeCategory(cat, neg)   # \p{L}, \P{N}
 Predefined(name)            # \s, \d, \w
 SpecialChar(char)           # \r, \n, \t
 AnyChar()                   # .
-Quantifier(child, min, max) # *, +, ?, {n,m}
+Quantifier(child, min, max, greedy, possessive)  # *, +, ?, {n,m}, *?, *+
 Alternation(alternatives)   # a|b|c
 Sequence(children)          # abc
 GroupNode(child, flags)     # (...), (?:...), (?i:...)
@@ -72,7 +74,8 @@ Runs transformations until fixed point:
 | Special escapes | `\r`, `\n`, `\t`, `\xNN` |
 | Any character | `.` |
 | Quantifiers | `*`, `+`, `?`, `{n}`, `{n,m}`, `{n,}` |
-| Lazy quantifiers | `*?`, `+?`, `??` |
+| Lazy quantifiers | `*?`, `+?`, `??`, `{n,m}?` |
+| Possessive quantifiers | `*+`, `++`, `?+`, `{n,m}+` |
 | Alternation | `a\|b` |
 | Groups | `(...)`, `(?:...)`, `(?i:...)` |
 | Lookahead | `(?=...)`, `(?!...)` |
@@ -86,7 +89,6 @@ Runs transformations until fixed point:
 | Backreferences | `\1`, `\2` |
 | Named groups | `(?P<name>...)` |
 | Atomic groups | `(?>...)` |
-| Possessive quantifiers | `*+`, `++` |
 | Recursion | `(?R)` |
 | Conditionals | `(?(cond)...)` |
 

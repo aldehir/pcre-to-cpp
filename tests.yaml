@@ -32,3 +32,12 @@
     - unicode
     - math
     - edge_cases
+
+- name: bailingmoe
+  pattern: "'(?i:[sdmt]|ll|ve|re)|[^\\r\\n\\p{L}\\p{N}]?+\\p{L}+|\\p{N}| ?[^\\s\\p{L}\\p{N}]++[\\r\\n]*|\\s*[\\r\\n]|\\s+(?!\\S)|\\s+"
+  inputs:
+    - natural_language
+    - code
+    - unicode
+    - math
+    - edge_cases

@@ -75,6 +75,7 @@ class Quantifier:
     min_count: int
     max_count: int  # -1 means unlimited
     greedy: bool = True
+    possessive: bool = False  # If True, never backtrack
 
     def __repr__(self):
         if self.min_count == 0 and self.max_count == 1:
@@ -89,6 +90,11 @@ class Quantifier:
             q = f"{{{self.min_count},}}"
         else:
             q = f"{{{self.min_count},{self.max_count}}}"
+        # Add modifier suffix
+        if self.possessive:
+            q += "+"
+        elif not self.greedy:
+            q += "?"
         return f"Quantifier({self.child}, {q})"
 
 @dataclass
@@ -180,6 +186,7 @@ def nodes_equal(a: Node, b: Node) -> bool:
         return (a.min_count == b.min_count and
                 a.max_count == b.max_count and
                 a.greedy == b.greedy and
+                a.possessive == b.possessive and
                 nodes_equal(a.child, b.child))
     if isinstance(a, Sequence):
         if len(a.children) != len(b.children):
@@ -249,7 +256,7 @@ class ASTOptimizer:
 
         if isinstance(node, Quantifier):
             return Quantifier(self._transform(node.child),
-                              node.min_count, node.max_count, node.greedy)
+                              node.min_count, node.max_count, node.greedy, node.possessive)
 
         if isinstance(node, Sequence):
             return Sequence([self._transform(c) for c in node.children])
@@ -445,8 +452,8 @@ class PCREParser:
         # Check for quantifier
         quantifier = self._parse_quantifier()
         if quantifier:
-            min_c, max_c, greedy = quantifier
-            return Quantifier(atom, min_c, max_c, greedy)
+            min_c, max_c, greedy, possessive = quantifier
+            return Quantifier(atom, min_c, max_c, greedy, possessive)
 
         return atom
 
@@ -645,24 +652,24 @@ class PCREParser:
         self._expect(')')
         return GroupNode(child, capturing=True)
 
-    def _parse_quantifier(self) -> Optional[Tuple[int, int, bool]]:
-        """Parse quantifier: *, +, ?, {n}, {n,}, {n,m}"""
+    def _parse_quantifier(self) -> Optional[Tuple[int, int, bool, bool]]:
+        """Parse quantifier: *, +, ?, {n}, {n,}, {n,m} with optional lazy (?) or possessive (+)"""
         ch = self._peek()
 
         if ch == '*':
             self._advance()
-            greedy = self._parse_lazy_modifier()
-            return (0, -1, greedy)
+            greedy, possessive = self._parse_quantifier_modifier()
+            return (0, -1, greedy, possessive)
 
         if ch == '+':
             self._advance()
-            greedy = self._parse_lazy_modifier()
-            return (1, -1, greedy)
+            greedy, possessive = self._parse_quantifier_modifier()
+            return (1, -1, greedy, possessive)
 
         if ch == '?':
             self._advance()
-            greedy = self._parse_lazy_modifier()
-            return (0, 1, greedy)
+            greedy, possessive = self._parse_quantifier_modifier()
+            return (0, 1, greedy, possessive)
 
         if ch == '{':
             self._advance()
@@ -676,8 +683,8 @@ class PCREParser:
             if self._peek() == '}':
                 # {n}
                 self._advance()
-                greedy = self._parse_lazy_modifier()
-                return (min_val, min_val, greedy)
+                greedy, possessive = self._parse_quantifier_modifier()
+                return (min_val, min_val, greedy, possessive)
 
             if self._peek() == ',':
                 self._advance()
@@ -685,8 +692,8 @@ class PCREParser:
                 if self._peek() == '}':
                     # {n,}
                     self._advance()
-                    greedy = self._parse_lazy_modifier()
-                    return (min_val, -1, greedy)
+                    greedy, possessive = self._parse_quantifier_modifier()
+                    return (min_val, -1, greedy, possessive)
 
                 # {n,m}
                 max_start = self.pos
@@ -695,19 +702,26 @@ class PCREParser:
                 max_val = int(self.pattern[max_start:self.pos])
 
                 self._expect('}')
-                greedy = self._parse_lazy_modifier()
-                return (min_val, max_val, greedy)
+                greedy, possessive = self._parse_quantifier_modifier()
+                return (min_val, max_val, greedy, possessive)
 
             raise ValueError(f"Invalid quantifier at position {self.pos}")
 
         return None
 
-    def _parse_lazy_modifier(self) -> bool:
-        """Parse optional lazy modifier '?'. Returns True if greedy."""
+    def _parse_quantifier_modifier(self) -> Tuple[bool, bool]:
+        """Parse optional lazy (?) or possessive (+) modifier.
+
+        Returns:
+            Tuple of (greedy, possessive)
+        """
         if self._peek() == '?':
             self._advance()
-            return False  # lazy
-        return True  # greedy
+            return (False, False)  # lazy: not greedy, not possessive
+        elif self._peek() == '+':
+            self._advance()
+            return (True, True)  # possessive: greedy, possessive
+        return (True, False)  # default: greedy, not possessive
 
 
 def parse_pcre(pattern: str) -> Node:
@@ -1348,31 +1362,34 @@ class CppEmitter:
             return False
         return False
 
-    def _contains_quantifier(self, node: Node) -> bool:
-        """Check if a node or its children contain quantifiers."""
+    def _contains_backtracking_quantifier(self, node: Node) -> bool:
+        """Check if a node or its children contain non-possessive quantifiers."""
         if isinstance(node, Quantifier):
-            return True
+            # Possessive quantifiers don't need backtracking
+            return not node.possessive
         if isinstance(node, Sequence):
-            return any(self._contains_quantifier(c) for c in node.children)
+            return any(self._contains_backtracking_quantifier(c) for c in node.children)
         if isinstance(node, GroupNode):
-            return self._contains_quantifier(node.child)
+            return self._contains_backtracking_quantifier(node.child)
         if isinstance(node, Alternation):
-            return any(self._contains_quantifier(a) for a in node.alternatives)
+            return any(self._contains_backtracking_quantifier(a) for a in node.alternatives)
         return False
 
     def _needs_backtracking(self, children: list) -> bool:
         """Determine if a sequence needs backtracking support.
 
-        Returns True if there's a quantifier followed by something that could fail.
+        Returns True if there's a non-possessive quantifier followed by something that could fail.
+        Possessive quantifiers never backtrack, so they don't trigger this.
         """
-        has_quantifier = False
+        has_backtracking_quantifier = False
         for i, child in enumerate(children):
-            is_quant = isinstance(child, Quantifier) or \
-                       (isinstance(child, GroupNode) and self._contains_quantifier(child.child))
+            # Check if this child is a non-possessive quantifier
+            is_backtracking_quant = (isinstance(child, Quantifier) and not child.possessive) or \
+                       (isinstance(child, GroupNode) and self._contains_backtracking_quantifier(child.child))
 
-            # Check BEFORE updating has_quantifier
-            if has_quantifier:
-                # Something after a quantifier - might need backtracking
+            # Check BEFORE updating has_backtracking_quantifier
+            if has_backtracking_quantifier:
+                # Something after a non-possessive quantifier - might need backtracking
                 if isinstance(child, (Lookahead, LiteralChar, CharClass, Predefined,
                                       UnicodeCategory, SpecialChar, AnyChar)):
                     return True
@@ -1380,11 +1397,11 @@ class CppEmitter:
                     return True
                 if isinstance(child, Alternation):
                     return True
-                if is_quant:
-                    return True  # Multiple quantifiers in sequence
+                if is_backtracking_quant:
+                    return True  # Multiple backtracking quantifiers in sequence
 
-            if is_quant:
-                has_quantifier = True
+            if is_backtracking_quant:
+                has_backtracking_quantifier = True
         return False
 
     def _generate_sequence_match(self, children: list, case_insensitive: bool = False):
@@ -1400,12 +1417,14 @@ class CppEmitter:
         """Generate sequence matching with stack-based backtracking.
 
         Strategy: Use shared bt_stack with base index tracking.
-        For each quantifier, collect ALL possible match positions into bt_stack.
-        Use nested loops to try all combinations, longest first (greedy).
+        For each non-possessive quantifier, collect ALL possible match positions into bt_stack.
+        Use nested loops to try all combinations, longest first (greedy) or shortest first (lazy).
+        Possessive quantifiers are matched greedily without backtracking.
         """
         quantifier_indices = []
         for i, child in enumerate(children):
-            if isinstance(child, Quantifier):
+            # Only include non-possessive quantifiers in backtracking
+            if isinstance(child, Quantifier) and not child.possessive:
                 quantifier_indices.append(i)
 
         if not quantifier_indices:
@@ -1454,13 +1473,14 @@ class CppEmitter:
         Uses shared bt_stack with base index tracking instead of per-quantifier vectors.
         For each quantifier, we:
         1. Collect all possible match positions into bt_stack
-        2. Loop from longest to shortest using base + index
+        2. Loop from longest to shortest (greedy) or shortest to longest (lazy)
         3. Inside the loop, either recurse to next quantifier or try remaining pattern
         """
         quant_idx = quant_indices[quant_num]
         quant = children[quant_idx]
         min_c = quant.min_count
         max_c = quant.max_count
+        greedy = quant.greedy
         base_name = f"q{quant_num}_base"
         count_name = f"q{quant_num}_count"
         quant_pattern = self._ast_to_pattern(quant)
@@ -1492,9 +1512,16 @@ class CppEmitter:
         self._emit(f"size_t {count_name} = bt_stack.size() - {base_name};")
         self._emit("")
 
-        # Loop through positions from longest to shortest
-        self._emit(f"// Try quantifier {quant_num} positions (min_count={min_c})")
-        with self._block(f"for (size_t i{quant_num} = {count_name}; i{quant_num} > {min_c}; i{quant_num}--) {{"):
+        # Loop through positions - direction depends on greedy vs lazy
+        if greedy:
+            # Greedy: try longest match first, backtrack to shorter
+            self._emit(f"// Try quantifier {quant_num} positions longest-first (greedy, min_count={min_c})")
+            loop_header = f"for (size_t i{quant_num} = {count_name}; i{quant_num} > {min_c}; i{quant_num}--) {{"
+        else:
+            # Lazy: try shortest match first, extend if needed
+            self._emit(f"// Try quantifier {quant_num} positions shortest-first (lazy, min_count={min_c})")
+            loop_header = f"for (size_t i{quant_num} = {min_c} + 1; i{quant_num} <= {count_name}; i{quant_num}++) {{"
+        with self._block(loop_header):
             self._emit(f"match_pos = bt_stack[{base_name} + i{quant_num} - 1];")
             self._emit("matched = true;")
 
@@ -1631,18 +1658,25 @@ class CppEmitter:
             return "."
         elif isinstance(ast, Quantifier):
             child = self._ast_to_pattern(ast.child, depth + 1)
+            # Build base quantifier
             if ast.min_count == 0 and ast.max_count == 1:
-                return f"{child}?"
+                q = "?"
             elif ast.min_count == 0 and ast.max_count == -1:
-                return f"{child}*"
+                q = "*"
             elif ast.min_count == 1 and ast.max_count == -1:
-                return f"{child}+"
+                q = "+"
             elif ast.min_count == ast.max_count:
-                return f"{child}{{{ast.min_count}}}"
+                q = f"{{{ast.min_count}}}"
             elif ast.max_count == -1:
-                return f"{child}{{{ast.min_count},}}"
+                q = f"{{{ast.min_count},}}"
             else:
-                return f"{child}{{{ast.min_count},{ast.max_count}}}"
+                q = f"{{{ast.min_count},{ast.max_count}}}"
+            # Add lazy or possessive suffix
+            if ast.possessive:
+                q += "+"
+            elif not ast.greedy:
+                q += "?"
+            return f"{child}{q}"
         elif isinstance(ast, Alternation):
             alts = [self._ast_to_pattern(a, depth + 1) for a in ast.alternatives]
             alt_str = "|".join(alts)
