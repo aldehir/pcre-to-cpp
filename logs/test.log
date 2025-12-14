@@ -3740,4 +3740,1066 @@ SUCCESS: All 346 tests passed!
       C++: ['                                                                ']
       Ref: ['                                                                ']
 
-=== ALL 4 TEST(S) PASSED ===
+### Testing: bailingmoe ###
+
+============================================================
+Pattern: '(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}| ?[^\s...
+Reference: tokenizers library (regex-based)
+Test strings: 346
+============================================================
+
+[1/4] Generating C++ code...
+Generated: E:\Development\AI\pcre-to-cpp\test-harness\generated\tests\bailingmoe.cpp
+
+[2/4] Building C++ code...
+Build successful
+
+[3/4] Running C++ tests...
+
+[4/4] Running reference tests...
+
+--- Results ---
+
+SUCCESS: All 346 tests passed!
+
+--- Detailed Results ---
+[OK] 'Hello World'
+      C++: ['Hello', ' World']
+      Ref: ['Hello', ' World']
+[OK] 'The cat sat on the mat'
+      C++: ['The', ' cat', ' sat', ' on', ' the', ' mat']
+      Ref: ['The', ' cat', ' sat', ' on', ' the', ' mat']
+[OK] 'I like apples'
+      C++: ['I', ' like', ' apples']
+      Ref: ['I', ' like', ' apples']
+[OK] 'Good morning'
+      C++: ['Good', ' morning']
+      Ref: ['Good', ' morning']
+[OK] "I'm going to the store"
+      C++: ['I', "'m", ' going', ' to', ' the', ' store']
+      Ref: ['I', "'m", ' going', ' to', ' the', ' store']
+[OK] "It's a beautiful day"
+      C++: ['It', "'s", ' a', ' beautiful', ' day']
+      Ref: ['It', "'s", ' a', ' beautiful', ' day']
+[OK] "They're coming tomorrow"
+      C++: ['They', "'re", ' coming', ' tomorrow']
+      Ref: ['They', "'re", ' coming', ' tomorrow']
+[OK] "John's book is on the table"
+      C++: ['John', "'s", ' book', ' is', ' on', ' the', ' table']
+      Ref: ['John', "'s", ' book', ' is', ' on', ' the', ' table']
+[OK] "I'll see you there, won't I?"
+      C++: ['I', "'ll", ' see', ' you', ' there', ',', ' won', "'t", ' I', '?']
+      Ref: ['I', "'ll", ' see', ' you', ' there', ',', ' won', "'t", ' I', '?']
+[OK] "We've been waiting, but they haven't arrived yet."
+      C++: ['We', "'ve", ' been', ' waiting', ',', ' but', ' they', ' haven', "'t", ' arrived', ' yet', '.']
+      Ref: ['We', "'ve", ' been', ' waiting', ',', ' but', ' they', ' haven', "'t", ' arrived', ' yet', '.']
+[OK] "You'd better go now, or you'll be late."
+      C++: ['You', "'d", ' better', ' go', ' now', ',', ' or', ' you', "'ll", ' be', ' late', '.']
+      Ref: ['You', "'d", ' better', ' go', ' now', ',', ' or', ' you', "'ll", ' be', ' late', '.']
+[OK] "She'd've come if she could, but she couldn't."
+      C++: ['She', "'d", "'ve", ' come', ' if', ' she', ' could', ',', ' but', ' she', ' couldn', "'t", '.']
+      Ref: ['She', "'d", "'ve", ' come', ' if', ' she', ' could', ',', ' but', ' she', ' couldn', "'t", '.']
+[OK] '"Hello," she said, "how are you?"'
+      C++: ['"Hello', ',"', ' she', ' said', ',', ' "', 'how', ' are', ' you', '?"']
+      Ref: ['"Hello', ',"', ' she', ' said', ',', ' "', 'how', ' are', ' you', '?"']
+[OK] 'Wait—what did you say?!'
+      C++: ['Wait', '—what', ' did', ' you', ' say', '?!']
+      Ref: ['Wait', '—what', ' did', ' you', ' say', '?!']
+[OK] 'The items were: apples, oranges, and bananas.'
+      C++: ['The', ' items', ' were', ':', ' apples', ',', ' oranges', ',', ' and', ' bananas', '.']
+      Ref: ['The', ' items', ' were', ':', ' apples', ',', ' oranges', ',', ' and', ' bananas', '.']
+[OK] 'He asked, "Are you sure about this?"'
+      C++: ['He', ' asked', ',', ' "', 'Are', ' you', ' sure', ' about', ' this', '?"']
+      Ref: ['He', ' asked', ',', ' "', 'Are', ' you', ' sure', ' about', ' this', '?"']
+[OK] 'The quick brown fox jumps over the lazy dog, while the cat watches from\nthe windowsill with mild interest.\n'
+      C++: ['The', ' quick', ' brown', ' fox', ' jumps', ' over', ' the', ' lazy', ' dog', ',', ' while', ' the', ' cat', ' watches', ' from', '\n', 'the', ' windowsill', ' with', ' mild', ' interest', '.\n']
+      Ref: ['The', ' quick', ' brown', ' fox', ' jumps', ' over', ' the', ' lazy', ' dog', ',', ' while', ' the', ' cat', ' watches', ' from', '\n', 'the', ' windowsill', ' with', ' mild', ' interest', '.\n']
+[OK] "I can't believe it's already December! Where did the year go? It feels\nlike just yesterday we were celebrating New Year's Eve.\n"
+      C++: ['I', ' can', "'t", ' believe', ' it', "'s", ' already', ' December', '!', ' Where', ' did', ' the', ' year', ' go', '?', ' It', ' feels', '\n', 'like', ' just', ' yesterday', ' we', ' were', ' celebrating', ' New', ' Year', "'s", ' Eve', '.\n']
+      Ref: ['I', ' can', "'t", ' believe', ' it', "'s", ' already', ' December', '!', ' Where', ' did', ' the', ' year', ' go', '?', ' It', ' feels', '\n', 'like', ' just', ' yesterday', ' we', ' were', ' celebrating', ' New', ' Year', "'s", ' Eve', '.\n']
+[OK] 'The morning sun cast long shadows across the quiet street. Birds chirped\nin the distance, and a gentle breeze rustled the leaves. It was going to\nbe a beautiful day—perfect for a walk in the park.\n'
+      C++: ['The', ' morning', ' sun', ' cast', ' long', ' shadows', ' across', ' the', ' quiet', ' street', '.', ' Birds', ' chirped', '\n', 'in', ' the', ' distance', ',', ' and', ' a', ' gentle', ' breeze', ' rustled', ' the', ' leaves', '.', ' It', ' was', ' going', ' to', '\n', 'be', ' a', ' beautiful', ' day', '—perfect', ' for', ' a', ' walk', ' in', ' the', ' park', '.\n']
+      Ref: ['The', ' morning', ' sun', ' cast', ' long', ' shadows', ' across', ' the', ' quiet', ' street', '.', ' Birds', ' chirped', '\n', 'in', ' the', ' distance', ',', ' and', ' a', ' gentle', ' breeze', ' rustled', ' the', ' leaves', '.', ' It', ' was', ' going', ' to', '\n', 'be', ' a', ' beautiful', ' day', '—perfect', ' for', ' a', ' walk', ' in', ' the', ' park', '.\n']
+[OK] '"I\'m not sure I understand," she said, frowning. "You\'re telling me that\nwe\'ve been doing this wrong the entire time?" He nodded slowly. "I\'m\nafraid so. But don\'t worry—we can fix it."\n'
+      C++: ['"I', "'m", ' not', ' sure', ' I', ' understand', ',"', ' she', ' said', ',', ' frowning', '.', ' "', 'You', "'re", ' telling', ' me', ' that', '\n', 'we', "'ve", ' been', ' doing', ' this', ' wrong', ' the', ' entire', ' time', '?"', ' He', ' nodded', ' slowly', '.', ' "', 'I', "'m", '\n', 'afraid', ' so', '.', ' But', ' don', "'t", ' worry', '—we', ' can', ' fix', ' it', '."\n']
+      Ref: ['"I', "'m", ' not', ' sure', ' I', ' understand', ',"', ' she', ' said', ',', ' frowning', '.', ' "', 'You', "'re", ' telling', ' me', ' that', '\n', 'we', "'ve", ' been', ' doing', ' this', ' wrong', ' the', ' entire', ' time', '?"', ' He', ' nodded', ' slowly', '.', ' "', 'I', "'m", '\n', 'afraid', ' so', '.', ' But', ' don', "'t", ' worry', '—we', ' can', ' fix', ' it', '."\n']
+[OK] 'The professor cleared his throat. "Today, we\'ll be discussing quantum\nmechanics—specifically, the observer effect." Several students groaned.\n"I know, I know," he continued, "but trust me, it\'s fascinating stuff.\nYou\'ll see."\n'
+      C++: ['The', ' professor', ' cleared', ' his', ' throat', '.', ' "', 'Today', ',', ' we', "'ll", ' be', ' discussing', ' quantum', '\n', 'mechanics', '—specifically', ',', ' the', ' observer', ' effect', '."', ' Several', ' students', ' groaned', '.\n', '"I', ' know', ',', ' I', ' know', ',"', ' he', ' continued', ',', ' "', 'but', ' trust', ' me', ',', ' it', "'s", ' fascinating', ' stuff', '.\n', 'You', "'ll", ' see', '."\n']
+      Ref: ['The', ' professor', ' cleared', ' his', ' throat', '.', ' "', 'Today', ',', ' we', "'ll", ' be', ' discussing', ' quantum', '\n', 'mechanics', '—specifically', ',', ' the', ' observer', ' effect', '."', ' Several', ' students', ' groaned', '.\n', '"I', ' know', ',', ' I', ' know', ',"', ' he', ' continued', ',', ' "', 'but', ' trust', ' me', ',', ' it', "'s", ' fascinating', ' stuff', '.\n', 'You', "'ll", ' see', '."\n']
+[OK] "In the year 2024, technology had advanced far beyond what anyone in the\n20th century could've imagined. Self-driving cars weren't just common—\nthey were the norm. AI assistants helped with everything from cooking\nto coding. Yet, despite all these advances, some things remained\nunchanged: people still loved a good story, still cherished their\nfriendships, and still wondered about life's big questions.\n"
+      C++: ['In', ' the', ' year', ' ', '2', '0', '2', '4', ',', ' technology', ' had', ' advanced', ' far', ' beyond', ' what', ' anyone', ' in', ' the', '\n', '2', '0', 'th', ' century', ' could', "'ve", ' imagined', '.', ' Self', '-driving', ' cars', ' weren', "'t", ' just', ' common', '—\n', 'they', ' were', ' the', ' norm', '.', ' AI', ' assistants', ' helped', ' with', ' everything', ' from', ' cooking', '\n', 'to', ' coding', '.', ' Yet', ',', ' despite', ' all', ' these', ' advances', ',', ' some', ' things', ' remained', '\n', 'unchanged', ':', ' people', ' still', ' loved', ' a', ' good', ' story', ',', ' still', ' cherished', ' their', '\n', 'friendships', ',', ' and', ' still', ' wondered', ' about', ' life', "'s", ' big', ' questions', '.\n']
+      Ref: ['In', ' the', ' year', ' ', '2', '0', '2', '4', ',', ' technology', ' had', ' advanced', ' far', ' beyond', ' what', ' anyone', ' in', ' the', '\n', '2', '0', 'th', ' century', ' could', "'ve", ' imagined', '.', ' Self', '-driving', ' cars', ' weren', "'t", ' just', ' common', '—\n', 'they', ' were', ' the', ' norm', '.', ' AI', ' assistants', ' helped', ' with', ' everything', ' from', ' cooking', '\n', 'to', ' coding', '.', ' Yet', ',', ' despite', ' all', ' these', ' advances', ',', ' some', ' things', ' remained', '\n', 'unchanged', ':', ' people', ' still', ' loved', ' a', ' good', ' story', ',', ' still', ' cherished', ' their', '\n', 'friendships', ',', ' and', ' still', ' wondered', ' about', ' life', "'s", ' big', ' questions', '.\n']
+[OK] 'Dr. Smith went to St. Louis at 3:00 p.m. on Dec. 15th.\nHe met with Prof. Johnson, Ph.D., who said, "The data doesn\'t lie."\nThey discussed various topics: quantum physics, machine learning, etc.\n'
+      C++: ['Dr', '.', ' Smith', ' went', ' to', ' St', '.', ' Louis', ' at', ' ', '3', ':', '0', '0', ' p', '.m', '.', ' on', ' Dec', '.', ' ', '1', '5', 'th', '.\n', 'He', ' met', ' with', ' Prof', '.', ' Johnson', ',', ' Ph', '.D', '.,', ' who', ' said', ',', ' "', 'The', ' data', ' doesn', "'t", ' lie', '."\n', 'They', ' discussed', ' various', ' topics', ':', ' quantum', ' physics', ',', ' machine', ' learning', ',', ' etc', '.\n']
+      Ref: ['Dr', '.', ' Smith', ' went', ' to', ' St', '.', ' Louis', ' at', ' ', '3', ':', '0', '0', ' p', '.m', '.', ' on', ' Dec', '.', ' ', '1', '5', 'th', '.\n', 'He', ' met', ' with', ' Prof', '.', ' Johnson', ',', ' Ph', '.D', '.,', ' who', ' said', ',', ' "', 'The', ' data', ' doesn', "'t", ' lie', '."\n', 'They', ' discussed', ' various', ' topics', ':', ' quantum', ' physics', ',', ' machine', ' learning', ',', ' etc', '.\n']
+[OK] 'It was the best of times, it was the worst of times, it was the age of\nwisdom, it was the age of foolishness, it was the epoch of belief, it\nwas the epoch of incredulity, it was the season of Light, it was the\nseason of Darkness, it was the spring of hope, it was the winter of\ndespair, we had everything before us, we had nothing before us, we were\nall going direct to Heaven, we were all going direct the other way—in\nshort, the period was so far like the present period, that some of its\nnoisiest authorities insisted on its being received, for good or for\nevil, in the superlative degree of comparison only.\n'
+      C++: ['It', ' was', ' the', ' best', ' of', ' times', ',', ' it', ' was', ' the', ' worst', ' of', ' times', ',', ' it', ' was', ' the', ' age', ' of', '\n', 'wisdom', ',', ' it', ' was', ' the', ' age', ' of', ' foolishness', ',', ' it', ' was', ' the', ' epoch', ' of', ' belief', ',', ' it', '\n', 'was', ' the', ' epoch', ' of', ' incredulity', ',', ' it', ' was', ' the', ' season', ' of', ' Light', ',', ' it', ' was', ' the', '\n', 'season', ' of', ' Darkness', ',', ' it', ' was', ' the', ' spring', ' of', ' hope', ',', ' it', ' was', ' the', ' winter', ' of', '\n', 'despair', ',', ' we', ' had', ' everything', ' before', ' us', ',', ' we', ' had', ' nothing', ' before', ' us', ',', ' we', ' were', '\n', 'all', ' going', ' direct', ' to', ' Heaven', ',', ' we', ' were', ' all', ' going', ' direct', ' the', ' other', ' way', '—in', '\n', 'short', ',', ' the', ' period', ' was', ' so', ' far', ' like', ' the', ' present', ' period', ',', ' that', ' some', ' of', ' its', '\n', 'noisiest', ' authorities', ' insisted', ' on', ' its', ' being', ' received', ',', ' for', ' good', ' or', ' for', '\n', 'evil', ',', ' in', ' the', ' superlative', ' degree', ' of', ' comparison', ' only', '.\n']
+      Ref: ['It', ' was', ' the', ' best', ' of', ' times', ',', ' it', ' was', ' the', ' worst', ' of', ' times', ',', ' it', ' was', ' the', ' age', ' of', '\n', 'wisdom', ',', ' it', ' was', ' the', ' age', ' of', ' foolishness', ',', ' it', ' was', ' the', ' epoch', ' of', ' belief', ',', ' it', '\n', 'was', ' the', ' epoch', ' of', ' incredulity', ',', ' it', ' was', ' the', ' season', ' of', ' Light', ',', ' it', ' was', ' the', '\n', 'season', ' of', ' Darkness', ',', ' it', ' was', ' the', ' spring', ' of', ' hope', ',', ' it', ' was', ' the', ' winter', ' of', '\n', 'despair', ',', ' we', ' had', ' everything', ' before', ' us', ',', ' we', ' had', ' nothing', ' before', ' us', ',', ' we', ' were', '\n', 'all', ' going', ' direct', ' to', ' Heaven', ',', ' we', ' were', ' all', ' going', ' direct', ' the', ' other', ' way', '—in', '\n', 'short', ',', ' the', ' period', ' was', ' so', ' far', ' like', ' the', ' present', ' period', ',', ' that', ' some', ' of', ' its', '\n', 'noisiest', ' authorities', ' insisted', ' on', ' its', ' being', ' received', ',', ' for', ' good', ' or', ' for', '\n', 'evil', ',', ' in', ' the', ' superlative', ' degree', ' of', ' comparison', ' only', '.\n']
+[OK] 'x'
+      C++: ['x']
+      Ref: ['x']
+[OK] 'foo'
+      C++: ['foo']
+      Ref: ['foo']
+[OK] 'my_variable'
+      C++: ['my', '_variable']
+      Ref: ['my', '_variable']
+[OK] 'a + b'
+      C++: ['a', ' +', ' b']
+      Ref: ['a', ' +', ' b']
+[OK] 'x = 5'
+      C++: ['x', ' =', ' ', '5']
+      Ref: ['x', ' =', ' ', '5']
+[OK] 'result = x * y'
+      C++: ['result', ' =', ' x', ' *', ' y']
+      Ref: ['result', ' =', ' x', ' *', ' y']
+[OK] 'if (x > 0)'
+      C++: ['if', ' (', 'x', ' >', ' ', '0', ')']
+      Ref: ['if', ' (', 'x', ' >', ' ', '0', ')']
+[OK] 'return true;'
+      C++: ['return', ' true', ';']
+      Ref: ['return', ' true', ';']
+[OK] 'count += 1'
+      C++: ['count', ' +=', ' ', '1']
+      Ref: ['count', ' +=', ' ', '1']
+[OK] 'value == 42'
+      C++: ['value', ' ==', ' ', '4', '2']
+      Ref: ['value', ' ==', ' ', '4', '2']
+[OK] 'print("hello")'
+      C++: ['print', '("', 'hello', '")']
+      Ref: ['print', '("', 'hello', '")']
+[OK] 'len(array)'
+      C++: ['len', '(array', ')']
+      Ref: ['len', '(array', ')']
+[OK] 'Math.max(a, b)'
+      C++: ['Math', '.max', '(a', ',', ' b', ')']
+      Ref: ['Math', '.max', '(a', ',', ' b', ')']
+[OK] 'array.map(x => x * 2)'
+      C++: ['array', '.map', '(x', ' =>', ' x', ' *', ' ', '2', ')']
+      Ref: ['array', '.map', '(x', ' =>', ' x', ' *', ' ', '2', ')']
+[OK] 'def calculate():'
+      C++: ['def', ' calculate', '():']
+      Ref: ['def', ' calculate', '():']
+[OK] 'for i in range(10):'
+      C++: ['for', ' i', ' in', ' range', '(', '1', '0', '):']
+      Ref: ['for', ' i', ' in', ' range', '(', '1', '0', '):']
+[OK] 'const value = null;'
+      C++: ['const', ' value', ' =', ' null', ';']
+      Ref: ['const', ' value', ' =', ' null', ';']
+[OK] 'import numpy as np'
+      C++: ['import', ' numpy', ' as', ' np']
+      Ref: ['import', ' numpy', ' as', ' np']
+[OK] 'def factorial(n):\n    if n <= 1:\n        return 1\n    return n * factorial(n - 1)\n'
+      C++: ['def', ' factorial', '(n', '):\n', '   ', ' if', ' n', ' <=', ' ', '1', ':\n', '       ', ' return', ' ', '1', '\n', '   ', ' return', ' n', ' *', ' factorial', '(n', ' -', ' ', '1', ')\n']
+      Ref: ['def', ' factorial', '(n', '):\n', '   ', ' if', ' n', ' <=', ' ', '1', ':\n', '       ', ' return', ' ', '1', '\n', '   ', ' return', ' n', ' *', ' factorial', '(n', ' -', ' ', '1', ')\n']
+[OK] 'function fibonacci(n) {\n    if (n <= 1) return n;\n    return fibonacci(n - 1) + fibonacci(n - 2);\n}\n'
+      C++: ['function', ' fibonacci', '(n', ')', ' {\n', '   ', ' if', ' (', 'n', ' <=', ' ', '1', ')', ' return', ' n', ';\n', '   ', ' return', ' fibonacci', '(n', ' -', ' ', '1', ')', ' +', ' fibonacci', '(n', ' -', ' ', '2', ');\n', '}\n']
+      Ref: ['function', ' fibonacci', '(n', ')', ' {\n', '   ', ' if', ' (', 'n', ' <=', ' ', '1', ')', ' return', ' n', ';\n', '   ', ' return', ' fibonacci', '(n', ' -', ' ', '1', ')', ' +', ' fibonacci', '(n', ' -', ' ', '2', ');\n', '}\n']
+[OK] 'const calculateSum = (arr) => {\n    return arr.reduce((acc, val) => acc + val, 0);\n};\n'
+      C++: ['const', ' calculateSum', ' =', ' (', 'arr', ')', ' =>', ' {\n', '   ', ' return', ' arr', '.reduce', '((', 'acc', ',', ' val', ')', ' =>', ' acc', ' +', ' val', ',', ' ', '0', ');\n', '};\n']
+      Ref: ['const', ' calculateSum', ' =', ' (', 'arr', ')', ' =>', ' {\n', '   ', ' return', ' arr', '.reduce', '((', 'acc', ',', ' val', ')', ' =>', ' acc', ' +', ' val', ',', ' ', '0', ');\n', '};\n']
+[OK] 'class Calculator:\n    def __init__(self):\n        self.result = 0\n\n    def add(self, x):\n        self.result += x\n        return self\n'
+      C++: ['class', ' Calculator', ':\n', '   ', ' def', ' __', 'init', '__(', 'self', '):\n', '       ', ' self', '.result', ' =', ' ', '0', '\n\n', '   ', ' def', ' add', '(self', ',', ' x', '):\n', '       ', ' self', '.result', ' +=', ' x', '\n', '       ', ' return', ' self', '\n']
+      Ref: ['class', ' Calculator', ':\n', '   ', ' def', ' __', 'init', '__(', 'self', '):\n', '       ', ' self', '.result', ' =', ' ', '0', '\n\n', '   ', ' def', ' add', '(self', ',', ' x', '):\n', '       ', ' self', '.result', ' +=', ' x', '\n', '       ', ' return', ' self', '\n']
+[OK] 'public class BinarySearch {\n    public static int search(int[] arr, int target) {\n        int left = 0, right = arr.length - 1;\n        while (left <= right) {\n            int mid = left + (right - left) / 2;\n            if (arr[mid] == target) return mid;\n            if (arr[mid] < target) left = mid + 1;\n            else right = mid - 1;\n        }\n        return -1;\n    }\n}\n'
+      C++: ['public', ' class', ' BinarySearch', ' {\n', '   ', ' public', ' static', ' int', ' search', '(int', '[]', ' arr', ',', ' int', ' target', ')', ' {\n', '       ', ' int', ' left', ' =', ' ', '0', ',', ' right', ' =', ' arr', '.length', ' -', ' ', '1', ';\n', '       ', ' while', ' (', 'left', ' <=', ' right', ')', ' {\n', '           ', ' int', ' mid', ' =', ' left', ' +', ' (', 'right', ' -', ' left', ')', ' /', ' ', '2', ';\n', '           ', ' if', ' (', 'arr', '[mid', ']', ' ==', ' target', ')', ' return', ' mid', ';\n', '           ', ' if', ' (', 'arr', '[mid', ']', ' <', ' target', ')', ' left', ' =', ' mid', ' +', ' ', '1', ';\n', '           ', ' else', ' right', ' =', ' mid', ' -', ' ', '1', ';\n', '       ', ' }\n', '       ', ' return', ' -', '1', ';\n', '   ', ' }\n', '}\n']
+      Ref: ['public', ' class', ' BinarySearch', ' {\n', '   ', ' public', ' static', ' int', ' search', '(int', '[]', ' arr', ',', ' int', ' target', ')', ' {\n', '       ', ' int', ' left', ' =', ' ', '0', ',', ' right', ' =', ' arr', '.length', ' -', ' ', '1', ';\n', '       ', ' while', ' (', 'left', ' <=', ' right', ')', ' {\n', '           ', ' int', ' mid', ' =', ' left', ' +', ' (', 'right', ' -', ' left', ')', ' /', ' ', '2', ';\n', '           ', ' if', ' (', 'arr', '[mid', ']', ' ==', ' target', ')', ' return', ' mid', ';\n', '           ', ' if', ' (', 'arr', '[mid', ']', ' <', ' target', ')', ' left', ' =', ' mid', ' +', ' ', '1', ';\n', '           ', ' else', ' right', ' =', ' mid', ' -', ' ', '1', ';\n', '       ', ' }\n', '       ', ' return', ' -', '1', ';\n', '   ', ' }\n', '}\n']
+[OK] '/**\n * Merges two sorted arrays into a single sorted array.\n * @param {number[]} arr1 - First sorted array\n * @param {number[]} arr2 - Second sorted array\n * @returns {number[]} Merged sorted array\n */\nfunction mergeSortedArrays(arr1, arr2) {\n    const result = [];\n    let i = 0, j = 0;\n\n    while (i < arr1.length && j < arr2.length) {\n        if (arr1[i] < arr2[j]) {\n            result.push(arr1[i++]);\n        } else {\n            result.push(arr2[j++]);\n        }\n    }\n\n    return result.concat(arr1.slice(i)).concat(arr2.slice(j));\n}\n'
+      C++: ['/**\n', ' *', ' Merges', ' two', ' sorted', ' arrays', ' into', ' a', ' single', ' sorted', ' array', '.\n', ' *', ' @', 'param', ' {', 'number', '[]}', ' arr', '1', ' -', ' First', ' sorted', ' array', '\n', ' *', ' @', 'param', ' {', 'number', '[]}', ' arr', '2', ' -', ' Second', ' sorted', ' array', '\n', ' *', ' @', 'returns', ' {', 'number', '[]}', ' Merged', ' sorted', ' array', '\n', ' */\n', 'function', ' mergeSortedArrays', '(arr', '1', ',', ' arr', '2', ')', ' {\n', '   ', ' const', ' result', ' =', ' [];\n', '   ', ' let', ' i', ' =', ' ', '0', ',', ' j', ' =', ' ', '0', ';\n\n', '   ', ' while', ' (', 'i', ' <', ' arr', '1', '.length', ' &&', ' j', ' <', ' arr', '2', '.length', ')', ' {\n', '       ', ' if', ' (', 'arr', '1', '[i', ']', ' <', ' arr', '2', '[j', '])', ' {\n', '           ', ' result', '.push', '(arr', '1', '[i', '++]);\n', '       ', ' }', ' else', ' {\n', '           ', ' result', '.push', '(arr', '2', '[j', '++]);\n', '       ', ' }\n', '   ', ' }\n\n', '   ', ' return', ' result', '.concat', '(arr', '1', '.slice', '(i', ')).', 'concat', '(arr', '2', '.slice', '(j', '));\n', '}\n']
+      Ref: ['/**\n', ' *', ' Merges', ' two', ' sorted', ' arrays', ' into', ' a', ' single', ' sorted', ' array', '.\n', ' *', ' @', 'param', ' {', 'number', '[]}', ' arr', '1', ' -', ' First', ' sorted', ' array', '\n', ' *', ' @', 'param', ' {', 'number', '[]}', ' arr', '2', ' -', ' Second', ' sorted', ' array', '\n', ' *', ' @', 'returns', ' {', 'number', '[]}', ' Merged', ' sorted', ' array', '\n', ' */\n', 'function', ' mergeSortedArrays', '(arr', '1', ',', ' arr', '2', ')', ' {\n', '   ', ' const', ' result', ' =', ' [];\n', '   ', ' let', ' i', ' =', ' ', '0', ',', ' j', ' =', ' ', '0', ';\n\n', '   ', ' while', ' (', 'i', ' <', ' arr', '1', '.length', ' &&', ' j', ' <', ' arr', '2', '.length', ')', ' {\n', '       ', ' if', ' (', 'arr', '1', '[i', ']', ' <', ' arr', '2', '[j', '])', ' {\n', '           ', ' result', '.push', '(arr', '1', '[i', '++]);\n', '       ', ' }', ' else', ' {\n', '           ', ' result', '.push', '(arr', '2', '[j', '++]);\n', '       ', ' }\n', '   ', ' }\n\n', '   ', ' return', ' result', '.concat', '(arr', '1', '.slice', '(i', ')).', 'concat', '(arr', '2', '.slice', '(j', '));\n', '}\n']
+[OK] "async function fetchUserData(userId) {\n    try {\n        const response = await fetch(`/api/users/${userId}`);\n        if (!response.ok) {\n            throw new Error('User not found');\n        }\n        const data = await response.json();\n        return data;\n    } catch (error) {\n        console.error('Error fetching user:', error);\n        return null;\n    }\n}\n"
+      C++: ['async', ' function', ' fetchUserData', '(userId', ')', ' {\n', '   ', ' try', ' {\n', '       ', ' const', ' response', ' =', ' await', ' fetch', '(`/', 'api', '/users', '/${', 'userId', '}`);\n', '       ', ' if', ' (!', 'response', '.ok', ')', ' {\n', '           ', ' throw', ' new', ' Error', "('", 'User', ' not', ' found', "');\n", '       ', ' }\n', '       ', ' const', ' data', ' =', ' await', ' response', '.json', '();\n', '       ', ' return', ' data', ';\n', '   ', ' }', ' catch', ' (', 'error', ')', ' {\n', '       ', ' console', '.error', "('", 'Error', ' fetching', ' user', ":',", ' error', ');\n', '       ', ' return', ' null', ';\n', '   ', ' }\n', '}\n']
+      Ref: ['async', ' function', ' fetchUserData', '(userId', ')', ' {\n', '   ', ' try', ' {\n', '       ', ' const', ' response', ' =', ' await', ' fetch', '(`/', 'api', '/users', '/${', 'userId', '}`);\n', '       ', ' if', ' (!', 'response', '.ok', ')', ' {\n', '           ', ' throw', ' new', ' Error', "('", 'User', ' not', ' found', "');\n", '       ', ' }\n', '       ', ' const', ' data', ' =', ' await', ' response', '.json', '();\n', '       ', ' return', ' data', ';\n', '   ', ' }', ' catch', ' (', 'error', ')', ' {\n', '       ', ' console', '.error', "('", 'Error', ' fetching', ' user', ":',", ' error', ');\n', '       ', ' return', ' null', ';\n', '   ', ' }\n', '}\n']
+[OK] 'def quicksort(arr):\n    """\n    Sorts an array using the quicksort algorithm.\n    Time complexity: O(n log n) average, O(n^2) worst case.\n    """\n    if len(arr) <= 1:\n        return arr\n\n    pivot = arr[len(arr) // 2]\n    left = [x for x in arr if x < pivot]\n    middle = [x for x in arr if x == pivot]\n    right = [x for x in arr if x > pivot]\n\n    return quicksort(left) + middle + quicksort(right)\n'
+      C++: ['def', ' quicksort', '(arr', '):\n', '   ', ' """\n', '   ', ' Sorts', ' an', ' array', ' using', ' the', ' quicksort', ' algorithm', '.\n', '   ', ' Time', ' complexity', ':', ' O', '(n', ' log', ' n', ')', ' average', ',', ' O', '(n', '^', '2', ')', ' worst', ' case', '.\n', '   ', ' """\n', '   ', ' if', ' len', '(arr', ')', ' <=', ' ', '1', ':\n', '       ', ' return', ' arr', '\n\n', '   ', ' pivot', ' =', ' arr', '[len', '(arr', ')', ' //', ' ', '2', ']\n', '   ', ' left', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' <', ' pivot', ']\n', '   ', ' middle', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' ==', ' pivot', ']\n', '   ', ' right', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' >', ' pivot', ']\n\n', '   ', ' return', ' quicksort', '(left', ')', ' +', ' middle', ' +', ' quicksort', '(right', ')\n']
+      Ref: ['def', ' quicksort', '(arr', '):\n', '   ', ' """\n', '   ', ' Sorts', ' an', ' array', ' using', ' the', ' quicksort', ' algorithm', '.\n', '   ', ' Time', ' complexity', ':', ' O', '(n', ' log', ' n', ')', ' average', ',', ' O', '(n', '^', '2', ')', ' worst', ' case', '.\n', '   ', ' """\n', '   ', ' if', ' len', '(arr', ')', ' <=', ' ', '1', ':\n', '       ', ' return', ' arr', '\n\n', '   ', ' pivot', ' =', ' arr', '[len', '(arr', ')', ' //', ' ', '2', ']\n', '   ', ' left', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' <', ' pivot', ']\n', '   ', ' middle', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' ==', ' pivot', ']\n', '   ', ' right', ' =', ' [', 'x', ' for', ' x', ' in', ' arr', ' if', ' x', ' >', ' pivot', ']\n\n', '   ', ' return', ' quicksort', '(left', ')', ' +', ' middle', ' +', ' quicksort', '(right', ')\n']
+[OK] 'import React, { useState, useEffect } from \'react\';\n\nconst UserProfile = ({ userId }) => {\n    const [user, setUser] = useState(null);\n    const [loading, setLoading] = useState(true);\n\n    useEffect(() => {\n        const fetchUser = async () => {\n            try {\n                const response = await fetch(`/api/users/${userId}`);\n                const data = await response.json();\n                setUser(data);\n            } catch (error) {\n                console.error(\'Failed to fetch user:\', error);\n            } finally {\n                setLoading(false);\n            }\n        };\n\n        fetchUser();\n    }, [userId]);\n\n    if (loading) return <div>Loading...</div>;\n    if (!user) return <div>User not found</div>;\n\n    return (\n        <div className="user-profile">\n            <h1>{user.name}</h1>\n            <p>{user.email}</p>\n        </div>\n    );\n};\n\nexport default UserProfile;\n'
+      C++: ['import', ' React', ',', ' {', ' useState', ',', ' useEffect', ' }', ' from', " '", 'react', "';\n\n", 'const', ' UserProfile', ' =', ' ({', ' userId', ' })', ' =>', ' {\n', '   ', ' const', ' [', 'user', ',', ' setUser', ']', ' =', ' useState', '(null', ');\n', '   ', ' const', ' [', 'loading', ',', ' setLoading', ']', ' =', ' useState', '(true', ');\n\n', '   ', ' useEffect', '(()', ' =>', ' {\n', '       ', ' const', ' fetchUser', ' =', ' async', ' ()', ' =>', ' {\n', '           ', ' try', ' {\n', '               ', ' const', ' response', ' =', ' await', ' fetch', '(`/', 'api', '/users', '/${', 'userId', '}`);\n', '               ', ' const', ' data', ' =', ' await', ' response', '.json', '();\n', '               ', ' setUser', '(data', ');\n', '           ', ' }', ' catch', ' (', 'error', ')', ' {\n', '               ', ' console', '.error', "('", 'Failed', ' to', ' fetch', ' user', ":',", ' error', ');\n', '           ', ' }', ' finally', ' {\n', '               ', ' setLoading', '(false', ');\n', '           ', ' }\n', '       ', ' };\n\n', '       ', ' fetchUser', '();\n', '   ', ' },', ' [', 'userId', ']);\n\n', '   ', ' if', ' (', 'loading', ')', ' return', ' <', 'div', '>Loading', '...</', 'div', '>;\n', '   ', ' if', ' (!', 'user', ')', ' return', ' <', 'div', '>User', ' not', ' found', '</', 'div', '>;\n\n', '   ', ' return', ' (\n', '       ', ' <', 'div', ' className', '="', 'user', '-profile', '">\n', '           ', ' <', 'h', '1', '>{', 'user', '.name', '}</', 'h', '1', '>\n', '           ', ' <', 'p', '>{', 'user', '.email', '}</', 'p', '>\n', '       ', ' </', 'div', '>\n', '   ', ' );\n', '};\n\n', 'export', ' default', ' UserProfile', ';\n']
+      Ref: ['import', ' React', ',', ' {', ' useState', ',', ' useEffect', ' }', ' from', " '", 'react', "';\n\n", 'const', ' UserProfile', ' =', ' ({', ' userId', ' })', ' =>', ' {\n', '   ', ' const', ' [', 'user', ',', ' setUser', ']', ' =', ' useState', '(null', ');\n', '   ', ' const', ' [', 'loading', ',', ' setLoading', ']', ' =', ' useState', '(true', ');\n\n', '   ', ' useEffect', '(()', ' =>', ' {\n', '       ', ' const', ' fetchUser', ' =', ' async', ' ()', ' =>', ' {\n', '           ', ' try', ' {\n', '               ', ' const', ' response', ' =', ' await', ' fetch', '(`/', 'api', '/users', '/${', 'userId', '}`);\n', '               ', ' const', ' data', ' =', ' await', ' response', '.json', '();\n', '               ', ' setUser', '(data', ');\n', '           ', ' }', ' catch', ' (', 'error', ')', ' {\n', '               ', ' console', '.error', "('", 'Failed', ' to', ' fetch', ' user', ":',", ' error', ');\n', '           ', ' }', ' finally', ' {\n', '               ', ' setLoading', '(false', ');\n', '           ', ' }\n', '       ', ' };\n\n', '       ', ' fetchUser', '();\n', '   ', ' },', ' [', 'userId', ']);\n\n', '   ', ' if', ' (', 'loading', ')', ' return', ' <', 'div', '>Loading', '...</', 'div', '>;\n', '   ', ' if', ' (!', 'user', ')', ' return', ' <', 'div', '>User', ' not', ' found', '</', 'div', '>;\n\n', '   ', ' return', ' (\n', '       ', ' <', 'div', ' className', '="', 'user', '-profile', '">\n', '           ', ' <', 'h', '1', '>{', 'user', '.name', '}</', 'h', '1', '>\n', '           ', ' <', 'p', '>{', 'user', '.email', '}</', 'p', '>\n', '       ', ' </', 'div', '>\n', '   ', ' );\n', '};\n\n', 'export', ' default', ' UserProfile', ';\n']
+[OK] 'from typing import List, Dict, Optional, Callable\nfrom functools import wraps\nimport time\n\ndef timer(func: Callable) -> Callable:\n    """Decorator to measure function execution time."""\n    @wraps(func)\n    def wrapper(*args, **kwargs):\n        start = time.time()\n        result = func(*args, **kwargs)\n        end = time.time()\n        print(f"{func.__name__} took {end - start:.4f} seconds")\n        return result\n    return wrapper\n\nclass DataProcessor:\n    """Processes and analyzes data collections."""\n\n    def __init__(self, data: List[Dict[str, any]]):\n        self.data = data\n        self._cache: Dict[str, any] = {}\n\n    @timer\n    def aggregate(self, key: str) -> Optional[float]:\n        """Aggregates numeric values for a given key."""\n        if key in self._cache:\n            return self._cache[key]\n\n        values = [item[key] for item in self.data if key in item]\n        result = sum(values) / len(values) if values else None\n        self._cache[key] = result\n        return result\n'
+      C++: ['from', ' typing', ' import', ' List', ',', ' Dict', ',', ' Optional', ',', ' Callable', '\n', 'from', ' functools', ' import', ' wraps', '\n', 'import', ' time', '\n\n', 'def', ' timer', '(func', ':', ' Callable', ')', ' ->', ' Callable', ':\n', '   ', ' """', 'Decorator', ' to', ' measure', ' function', ' execution', ' time', '."""\n', '   ', ' @', 'wraps', '(func', ')\n', '   ', ' def', ' wrapper', '(*', 'args', ',', ' **', 'kwargs', '):\n', '       ', ' start', ' =', ' time', '.time', '()\n', '       ', ' result', ' =', ' func', '(*', 'args', ',', ' **', 'kwargs', ')\n', '       ', ' end', ' =', ' time', '.time', '()\n', '       ', ' print', '(f', '"{', 'func', '.__', 'name', '__}', ' took', ' {', 'end', ' -', ' start', ':.', '4', 'f', '}', ' seconds', '")\n', '       ', ' return', ' result', '\n', '   ', ' return', ' wrapper', '\n\n', 'class', ' DataProcessor', ':\n', '   ', ' """', 'Processes', ' and', ' analyzes', ' data', ' collections', '."""\n\n', '   ', ' def', ' __', 'init', '__(', 'self', ',', ' data', ':', ' List', '[Dict', '[str', ',', ' any', ']]):\n', '       ', ' self', '.data', ' =', ' data', '\n', '       ', ' self', '._', 'cache', ':', ' Dict', '[str', ',', ' any', ']', ' =', ' {}\n\n', '   ', ' @', 'timer', '\n', '   ', ' def', ' aggregate', '(self', ',', ' key', ':', ' str', ')', ' ->', ' Optional', '[float', ']:\n', '       ', ' """', 'Aggregates', ' numeric', ' values', ' for', ' a', ' given', ' key', '."""\n', '       ', ' if', ' key', ' in', ' self', '._', 'cache', ':\n', '           ', ' return', ' self', '._', 'cache', '[key', ']\n\n', '       ', ' values', ' =', ' [', 'item', '[key', ']', ' for', ' item', ' in', ' self', '.data', ' if', ' key', ' in', ' item', ']\n', '       ', ' result', ' =', ' sum', '(values', ')', ' /', ' len', '(values', ')', ' if', ' values', ' else', ' None', '\n', '       ', ' self', '._', 'cache', '[key', ']', ' =', ' result', '\n', '       ', ' return', ' result', '\n']
+      Ref: ['from', ' typing', ' import', ' List', ',', ' Dict', ',', ' Optional', ',', ' Callable', '\n', 'from', ' functools', ' import', ' wraps', '\n', 'import', ' time', '\n\n', 'def', ' timer', '(func', ':', ' Callable', ')', ' ->', ' Callable', ':\n', '   ', ' """', 'Decorator', ' to', ' measure', ' function', ' execution', ' time', '."""\n', '   ', ' @', 'wraps', '(func', ')\n', '   ', ' def', ' wrapper', '(*', 'args', ',', ' **', 'kwargs', '):\n', '       ', ' start', ' =', ' time', '.time', '()\n', '       ', ' result', ' =', ' func', '(*', 'args', ',', ' **', 'kwargs', ')\n', '       ', ' end', ' =', ' time', '.time', '()\n', '       ', ' print', '(f', '"{', 'func', '.__', 'name', '__}', ' took', ' {', 'end', ' -', ' start', ':.', '4', 'f', '}', ' seconds', '")\n', '       ', ' return', ' result', '\n', '   ', ' return', ' wrapper', '\n\n', 'class', ' DataProcessor', ':\n', '   ', ' """', 'Processes', ' and', ' analyzes', ' data', ' collections', '."""\n\n', '   ', ' def', ' __', 'init', '__(', 'self', ',', ' data', ':', ' List', '[Dict', '[str', ',', ' any', ']]):\n', '       ', ' self', '.data', ' =', ' data', '\n', '       ', ' self', '._', 'cache', ':', ' Dict', '[str', ',', ' any', ']', ' =', ' {}\n\n', '   ', ' @', 'timer', '\n', '   ', ' def', ' aggregate', '(self', ',', ' key', ':', ' str', ')', ' ->', ' Optional', '[float', ']:\n', '       ', ' """', 'Aggregates', ' numeric', ' values', ' for', ' a', ' given', ' key', '."""\n', '       ', ' if', ' key', ' in', ' self', '._', 'cache', ':\n', '           ', ' return', ' self', '._', 'cache', '[key', ']\n\n', '       ', ' values', ' =', ' [', 'item', '[key', ']', ' for', ' item', ' in', ' self', '.data', ' if', ' key', ' in', ' item', ']\n', '       ', ' result', ' =', ' sum', '(values', ')', ' /', ' len', '(values', ')', ' if', ' values', ' else', ' None', '\n', '       ', ' self', '._', 'cache', '[key', ']', ' =', ' result', '\n', '       ', ' return', ' result', '\n']
+[OK] 'café'
+      C++: ['café']
+      Ref: ['café']
+[OK] 'naïve'
+      C++: ['naïve']
+      Ref: ['naïve']
+[OK] 'résumé'
+      C++: ['résumé']
+      Ref: ['résumé']
+[OK] 'Zürich'
+      C++: ['Zürich']
+      Ref: ['Zürich']
+[OK] 'señor'
+      C++: ['señor']
+      Ref: ['señor']
+[OK] 'Ångström'
+      C++: ['Ångström']
+      Ref: ['Ångström']
+[OK] 'Dvořák'
+      C++: ['Dvořák']
+      Ref: ['Dvořák']
+[OK] 'São Paulo'
+      C++: ['São', ' Paulo']
+      Ref: ['São', ' Paulo']
+[OK] 'Łódź'
+      C++: ['Łódź']
+      Ref: ['Łódź']
+[OK] 'El Niño phenomenon'
+      C++: ['El', ' Niño', ' phenomenon']
+      Ref: ['El', ' Niño', ' phenomenon']
+[OK] '你好世界'
+      C++: ['你好世界']
+      Ref: ['你好世界']
+[OK] 'こんにちは世界'
+      C++: ['こんにちは世界']
+      Ref: ['こんにちは世界']
+[OK] '안녕하세요'
+      C++: ['안녕하세요']
+      Ref: ['안녕하세요']
+[OK] '日本語のテスト'
+      C++: ['日本語のテスト']
+      Ref: ['日本語のテスト']
+[OK] '中文测试文本'
+      C++: ['中文测试文本']
+      Ref: ['中文测试文本']
+[OK] 'مرحبا بك'
+      C++: ['مرحبا', ' بك']
+      Ref: ['مرحبا', ' بك']
+[OK] 'السلام عليكم'
+      C++: ['السلام', ' عليكم']
+      Ref: ['السلام', ' عليكم']
+[OK] 'اللغة العربية جميلة'
+      C++: ['اللغة', ' العربية', ' جميلة']
+      Ref: ['اللغة', ' العربية', ' جميلة']
+[OK] 'Привет мир'
+      C++: ['Привет', ' мир']
+      Ref: ['Привет', ' мир']
+[OK] 'Москва и Санкт-Петербург'
+      C++: ['Москва', ' и', ' Санкт', '-Петербург']
+      Ref: ['Москва', ' и', ' Санкт', '-Петербург']
+[OK] 'Hello 👋 World 🌍'
+      C++: ['Hello', ' 👋', ' World', ' 🌍']
+      Ref: ['Hello', ' 👋', ' World', ' 🌍']
+[OK] 'I ❤️ coding 💻'
+      C++: ['I', ' ❤️', ' coding', ' 💻']
+      Ref: ['I', ' ❤️', ' coding', ' 💻']
+[OK] 'Weather: ☀️ 🌧️ ❄️'
+      C++: ['Weather', ':', ' ☀️', ' 🌧️', ' ❄️']
+      Ref: ['Weather', ':', ' ☀️', ' 🌧️', ' ❄️']
+[OK] 'Hello 世界 مرحبا'
+      C++: ['Hello', ' 世界', ' مرحبا']
+      Ref: ['Hello', ' 世界', ' مرحبا']
+[OK] 'café in 東京 with друзья'
+      C++: ['café', ' in', ' 東京', ' with', ' друзья']
+      Ref: ['café', ' in', ' 東京', ' with', ' друзья']
+[OK] 'Programming 编程 プログラミング 프로그래밍'
+      C++: ['Programming', ' 编程', ' プログラミング', ' 프로그래밍']
+      Ref: ['Programming', ' 编程', ' プログラミング', ' 프로그래밍']
+[OK] 'Welcome to our international café! ☕\nWe serve: Espresso, Cappuccino, Latté\nAvailable in: English, 中文, 日本語, العربية, Русский\n'
+      C++: ['Welcome', ' to', ' our', ' international', ' café', '!', ' ☕\n', 'We', ' serve', ':', ' Espresso', ',', ' Cappuccino', ',', ' Latté', '\n', 'Available', ' in', ':', ' English', ',', ' 中文', ',', ' 日本語', ',', ' العربية', ',', ' Русский', '\n']
+      Ref: ['Welcome', ' to', ' our', ' international', ' café', '!', ' ☕\n', 'We', ' serve', ':', ' Espresso', ',', ' Cappuccino', ',', ' Latté', '\n', 'Available', ' in', ':', ' English', ',', ' 中文', ',', ' 日本語', ',', ' العربية', ',', ' Русский', '\n']
+[OK] 'The word "naïve" has two dots (diaeresis) over the i.\nIn German, "Köln" is written with an umlaut.\nFrench uses accents: é, è, ê, ë, à, ù.\n'
+      C++: ['The', ' word', ' "', 'naïve', '"', ' has', ' two', ' dots', ' (', 'diaeresis', ')', ' over', ' the', ' i', '.\n', 'In', ' German', ',', ' "', 'Köln', '"', ' is', ' written', ' with', ' an', ' umlaut', '.\n', 'French', ' uses', ' accents', ':', ' é', ',', ' è', ',', ' ê', ',', ' ë', ',', ' à', ',', ' ù', '.\n']
+      Ref: ['The', ' word', ' "', 'naïve', '"', ' has', ' two', ' dots', ' (', 'diaeresis', ')', ' over', ' the', ' i', '.\n', 'In', ' German', ',', ' "', 'Köln', '"', ' is', ' written', ' with', ' an', ' umlaut', '.\n', 'French', ' uses', ' accents', ':', ' é', ',', ' è', ',', ' ê', ',', ' ë', ',', ' à', ',', ' ù', '.\n']
+[OK] 'Family emojis: 👨\u200d👩\u200d👧\u200d👦 👨\u200d👨\u200d👧 👩\u200d👩\u200d👦\u200d👦\nProfessions: 👨\u200d💻 👩\u200d🔬 👨\u200d🎨 👩\u200d⚕️\nFlags: 🏳️\u200d🌈 🏴\u200d☠️\n'
+      C++: ['Family', ' emojis', ':', ' 👨\u200d👩\u200d👧\u200d👦', ' 👨\u200d👨\u200d👧', ' 👩\u200d👩\u200d👦\u200d👦\n', 'Professions', ':', ' 👨\u200d💻', ' 👩\u200d🔬', ' 👨\u200d🎨', ' 👩\u200d⚕️\n', 'Flags', ':', ' 🏳️\u200d🌈', ' 🏴\u200d☠️\n']
+      Ref: ['Family', ' emojis', ':', ' 👨\u200d👩\u200d👧\u200d👦', ' 👨\u200d👨\u200d👧', ' 👩\u200d👩\u200d👦\u200d👦\n', 'Professions', ':', ' 👨\u200d💻', ' 👩\u200d🔬', ' 👨\u200d🎨', ' 👩\u200d⚕️\n', 'Flags', ':', ' 🏳️\u200d🌈', ' 🏴\u200d☠️\n']
+[OK] 'Skin tone modifiers:\n👋 👋🏻 👋🏼 👋🏽 👋🏾 👋🏿\nPeople: 🙋 🙋🏻 🙋🏼 🙋🏽 🙋🏾 🙋🏿\n'
+      C++: ['Skin', ' tone', ' modifiers', ':\n', '👋', ' 👋🏻', ' 👋🏼', ' 👋🏽', ' 👋🏾', ' 👋🏿\n', 'People', ':', ' 🙋', ' 🙋🏻', ' 🙋🏼', ' 🙋🏽', ' 🙋🏾', ' 🙋🏿\n']
+      Ref: ['Skin', ' tone', ' modifiers', ':\n', '👋', ' 👋🏻', ' 👋🏼', ' 👋🏽', ' 👋🏾', ' 👋🏿\n', 'People', ':', ' 🙋', ' 🙋🏻', ' 🙋🏼', ' 🙋🏽', ' 🙋🏾', ' 🙋🏿\n']
+[OK] 'This text contains multiple scripts: English text, followed by Chinese\ncharacters (你好，这是中文), then Japanese (こんにちは、日本語です),\nKorean (안녕하세요, 한국어입니다), and Arabic (مرحبا، هذا نص عربي).\nBack to English with some French (Bonjour! Comment allez-vous?) and\nGerman (Guten Tag! Wie geht es Ihnen?).\n'
+      C++: ['This', ' text', ' contains', ' multiple', ' scripts', ':', ' English', ' text', ',', ' followed', ' by', ' Chinese', '\n', 'characters', ' (', '你好', '，这是中文', '),', ' then', ' Japanese', ' (', 'こんにちは', '、日本語です', '),\n', 'Korean', ' (', '안녕하세요', ',', ' 한국어입니다', '),', ' and', ' Arabic', ' (', 'مرحبا', '،', ' هذا', ' نص', ' عربي', ').\n', 'Back', ' to', ' English', ' with', ' some', ' French', ' (', 'Bonjour', '!', ' Comment', ' allez', '-vous', '?)', ' and', '\n', 'German', ' (', 'Guten', ' Tag', '!', ' Wie', ' geht', ' es', ' Ihnen', '?).\n']
+      Ref: ['This', ' text', ' contains', ' multiple', ' scripts', ':', ' English', ' text', ',', ' followed', ' by', ' Chinese', '\n', 'characters', ' (', '你好', '，这是中文', '),', ' then', ' Japanese', ' (', 'こんにちは', '、日本語です', '),\n', 'Korean', ' (', '안녕하세요', ',', ' 한국어입니다', '),', ' and', ' Arabic', ' (', 'مرحبا', '،', ' هذا', ' نص', ' عربي', ').\n', 'Back', ' to', ' English', ' with', ' some', ' French', ' (', 'Bonjour', '!', ' Comment', ' allez', '-vous', '?)', ' and', '\n', 'German', ' (', 'Guten', ' Tag', '!', ' Wie', ' geht', ' es', ' Ihnen', '?).\n']
+[OK] 'This text mixes LTR and RTL: Hello مرحبا World עולם שלום!\nNumbers in Arabic: ١٢٣٤٥٦٧٨٩٠\nMixed: The year 2024 is written as ٢٠٢٤ in Arabic-Indic digits.\n'
+      C++: ['This', ' text', ' mixes', ' LTR', ' and', ' RTL', ':', ' Hello', ' مرحبا', ' World', ' עולם', ' שלום', '!\n', 'Numbers', ' in', ' Arabic', ':', ' ', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '٠', '\n', 'Mixed', ':', ' The', ' year', ' ', '2', '0', '2', '4', ' is', ' written', ' as', ' ', '٢', '٠', '٢', '٤', ' in', ' Arabic', '-Indic', ' digits', '.\n']
+      Ref: ['This', ' text', ' mixes', ' LTR', ' and', ' RTL', ':', ' Hello', ' مرحبا', ' World', ' עולם', ' שלום', '!\n', 'Numbers', ' in', ' Arabic', ':', ' ', '١', '٢', '٣', '٤', '٥', '٦', '٧', '٨', '٩', '٠', '\n', 'Mixed', ':', ' The', ' year', ' ', '2', '0', '2', '4', ' is', ' written', ' as', ' ', '٢', '٠', '٢', '٤', ' in', ' Arabic', '-Indic', ' digits', '.\n']
+[OK] 'Mathematical symbols: ∀x ∈ ℝ, ∃y ∈ ℂ: x² + y² ≥ 0\nGreek letters: α, β, γ, δ, ε, ζ, η, θ, λ, μ, π, σ, ω, Ω\nSubscripts and superscripts: H₂O, E=mc², x₁ + x₂ = y\n'
+      C++: ['Mathematical', ' symbols', ':', ' ∀', 'x', ' ∈', ' ℝ', ',', ' ∃', 'y', ' ∈', ' ℂ', ':', ' x', '²', ' +', ' y', '²', ' ≥', ' ', '0', '\n', 'Greek', ' letters', ':', ' α', ',', ' β', ',', ' γ', ',', ' δ', ',', ' ε', ',', ' ζ', ',', ' η', ',', ' θ', ',', ' λ', ',', ' μ', ',', ' π', ',', ' σ', ',', ' ω', ',', ' Ω', '\n', 'Subscripts', ' and', ' superscripts', ':', ' H', '₂', 'O', ',', ' E', '=mc', '²', ',', ' x', '₁', ' +', ' x', '₂', ' =', ' y', '\n']
+      Ref: ['Mathematical', ' symbols', ':', ' ∀', 'x', ' ∈', ' ℝ', ',', ' ∃', 'y', ' ∈', ' ℂ', ':', ' x', '²', ' +', ' y', '²', ' ≥', ' ', '0', '\n', 'Greek', ' letters', ':', ' α', ',', ' β', ',', ' γ', ',', ' δ', ',', ' ε', ',', ' ζ', ',', ' η', ',', ' θ', ',', ' λ', ',', ' μ', ',', ' π', ',', ' σ', ',', ' ω', ',', ' Ω', '\n', 'Subscripts', ' and', ' superscripts', ':', ' H', '₂', 'O', ',', ' E', '=mc', '²', ',', ' x', '₁', ' +', ' x', '₂', ' =', ' y', '\n']
+[OK] 'Combining characters test:\ne + combining acute: é vs precomposed: é\nThe word "café" can be written as: café (precomposed) or café (decomposed)\nVietnamese: Tiếng Việt uses many combining diacritics\n'
+      C++: ['Combining', ' characters', ' test', ':\n', 'e', ' +', ' combining', ' acute', ':', ' é', ' vs', ' precomposed', ':', ' é', '\n', 'The', ' word', ' "', 'café', '"', ' can', ' be', ' written', ' as', ':', ' café', ' (', 'precomposed', ')', ' or', ' café', ' (', 'decomposed', ')\n', 'Vietnamese', ':', ' Tiếng', ' Việt', ' uses', ' many', ' combining', ' diacritics', '\n']
+      Ref: ['Combining', ' characters', ' test', ':\n', 'e', ' +', ' combining', ' acute', ':', ' é', ' vs', ' precomposed', ':', ' é', '\n', 'The', ' word', ' "', 'café', '"', ' can', ' be', ' written', ' as', ':', ' café', ' (', 'precomposed', ')', ' or', ' café', ' (', 'decomposed', ')\n', 'Vietnamese', ':', ' Tiếng', ' Việt', ' uses', ' many', ' combining', ' diacritics', '\n']
+[OK] "# International Newsletter 🌍\n\n**English**: Welcome to our global community! We're excited to have you.\n\n**中文**: 欢迎来到我们的全球社区！我们很高兴有你的加入。\n\n**日本語**: 私たちのグローバルコミュニティへようこそ！あなたをお迎えできて\n嬉しいです。\n\n**العربية**: مرحبا بكم في مجتمعنا العالمي! نحن متحمسون لوجودك معنا.\n\n**Русский**: Добро пожаловать в наше глобальное сообщество! Мы рады видеть вас.\n\n**Emoji status**: 🎉 🎊 🥳 ✨ 🌟 ⭐\n\nFor support, contact us at: support@example.com 📧\n"
+      C++: ['#', ' International', ' Newsletter', ' 🌍\n\n', '**', 'English', '**:', ' Welcome', ' to', ' our', ' global', ' community', '!', ' We', "'re", ' excited', ' to', ' have', ' you', '.\n\n', '**', '中文', '**:', ' 欢迎来到我们的全球社区', '！我们很高兴有你的加入', '。\n\n', '**', '日本語', '**:', ' 私たちのグローバルコミュニティへようこそ', '！あなたをお迎えできて', '\n', '嬉しいです', '。\n\n', '**', 'العربية', '**:', ' مرحبا', ' بكم', ' في', ' مجتمعنا', ' العالمي', '!', ' نحن', ' متحمسون', ' لوجودك', ' معنا', '.\n\n', '**', 'Русский', '**:', ' Добро', ' пожаловать', ' в', ' наше', ' глобальное', ' сообщество', '!', ' Мы', ' рады', ' видеть', ' вас', '.\n\n', '**', 'Emoji', ' status', '**:', ' 🎉', ' 🎊', ' 🥳', ' ✨', ' 🌟', ' ⭐\n\n', 'For', ' support', ',', ' contact', ' us', ' at', ':', ' support', '@example', '.com', ' 📧\n']
+      Ref: ['#', ' International', ' Newsletter', ' 🌍\n\n', '**', 'English', '**:', ' Welcome', ' to', ' our', ' global', ' community', '!', ' We', "'re", ' excited', ' to', ' have', ' you', '.\n\n', '**', '中文', '**:', ' 欢迎来到我们的全球社区', '！我们很高兴有你的加入', '。\n\n', '**', '日本語', '**:', ' 私たちのグローバルコミュニティへようこそ', '！あなたをお迎えできて', '\n', '嬉しいです', '。\n\n', '**', 'العربية', '**:', ' مرحبا', ' بكم', ' في', ' مجتمعنا', ' العالمي', '!', ' نحن', ' متحمسون', ' لوجودك', ' معنا', '.\n\n', '**', 'Русский', '**:', ' Добро', ' пожаловать', ' в', ' наше', ' глобальное', ' сообщество', '!', ' Мы', ' рады', ' видеть', ' вас', '.\n\n', '**', 'Emoji', ' status', '**:', ' 🎉', ' 🎊', ' 🥳', ' ✨', ' 🌟', ' ⭐\n\n', 'For', ' support', ',', ' contact', ' us', ' at', ':', ' support', '@example', '.com', ' 📧\n']
+[OK] 'Zero-width test: Hello\u200bWorld (contains ZWSP: U+200B)\nZero-width joiner: \u200d (U+200D)\nZero-width non-joiner: \u200c (U+200C)\nSoft hyphen:\xad (U+00AD)\nBOM: \ufeff(U+FEFF at the beginning of text)\nCombining: e︠ + combining characters\n'
+      C++: ['Zero', '-width', ' test', ':', ' Hello', '\u200bWorld', ' (', 'contains', ' ZWSP', ':', ' U', '+', '2', '0', '0', 'B', ')\n', 'Zero', '-width', ' joiner', ':', ' \u200d', ' (', 'U', '+', '2', '0', '0', 'D', ')\n', 'Zero', '-width', ' non', '-joiner', ':', ' \u200c', ' (', 'U', '+', '2', '0', '0', 'C', ')\n', 'Soft', ' hyphen', ':\xad', ' (', 'U', '+', '0', '0', 'AD', ')\n', 'BOM', ':', ' \ufeff(', 'U', '+FEFF', ' at', ' the', ' beginning', ' of', ' text', ')\n', 'Combining', ':', ' e', '︠', ' +', ' combining', ' characters', '\n']
+      Ref: ['Zero', '-width', ' test', ':', ' Hello', '\u200bWorld', ' (', 'contains', ' ZWSP', ':', ' U', '+', '2', '0', '0', 'B', ')\n', 'Zero', '-width', ' joiner', ':', ' \u200d', ' (', 'U', '+', '2', '0', '0', 'D', ')\n', 'Zero', '-width', ' non', '-joiner', ':', ' \u200c', ' (', 'U', '+', '2', '0', '0', 'C', ')\n', 'Soft', ' hyphen', ':\xad', ' (', 'U', '+', '0', '0', 'AD', ')\n', 'BOM', ':', ' \ufeff(', 'U', '+FEFF', ' at', ' the', ' beginning', ' of', ' text', ')\n', 'Combining', ':', ' e', '︠', ' +', ' combining', ' characters', '\n']
+[OK] 'Once upon a time in a café (una volta in un caffè, 从前在一家咖啡馆),\nthere lived a programmer 👨\u200d💻 who spoke many languages. He could say\n"Hello" in English, "你好" in Chinese, "こんにちは" in Japanese,\n"مرحبا" in Arabic, "Привет" in Russian, and "안녕하세요" in Korean.\n\nOne day, he decided to write a program that could handle all these\nscripts simultaneously. It wasn\'t easy—he had to deal with RTL text\n(like العربية and עברית), complex emoji sequences (like 👨\u200d👩\u200d👧\u200d👦 and\n🏳️\u200d🌈), combining diacritics (like é vs é), and even mathematical\nsymbols (∀x ∈ ℝ: x² ≥ 0).\n\nBut in the end, he succeeded! 🎉 His program could process text in any\nlanguage, any script, any direction. It was truly universal. ✨\n'
+      C++: ['Once', ' upon', ' a', ' time', ' in', ' a', ' café', ' (', 'una', ' volta', ' in', ' un', ' caffè', ',', ' 从前在一家咖啡馆', '),\n', 'there', ' lived', ' a', ' programmer', ' 👨\u200d💻', ' who', ' spoke', ' many', ' languages', '.', ' He', ' could', ' say', '\n', '"Hello', '"', ' in', ' English', ',', ' "', '你好', '"', ' in', ' Chinese', ',', ' "', 'こんにちは', '"', ' in', ' Japanese', ',\n', '"مرحبا', '"', ' in', ' Arabic', ',', ' "', 'Привет', '"', ' in', ' Russian', ',', ' and', ' "', '안녕하세요', '"', ' in', ' Korean', '.\n\n', 'One', ' day', ',', ' he', ' decided', ' to', ' write', ' a', ' program', ' that', ' could', ' handle', ' all', ' these', '\n', 'scripts', ' simultaneously', '.', ' It', ' wasn', "'t", ' easy', '—he', ' had', ' to', ' deal', ' with', ' RTL', ' text', '\n', '(like', ' العربية', ' and', ' עברית', '),', ' complex', ' emoji', ' sequences', ' (', 'like', ' 👨\u200d👩\u200d👧\u200d👦', ' and', '\n', '🏳️\u200d🌈),', ' combining', ' diacritics', ' (', 'like', ' é', ' vs', ' é', '),', ' and', ' even', ' mathematical', '\n', 'symbols', ' (∀', 'x', ' ∈', ' ℝ', ':', ' x', '²', ' ≥', ' ', '0', ').\n\n', 'But', ' in', ' the', ' end', ',', ' he', ' succeeded', '!', ' 🎉', ' His', ' program', ' could', ' process', ' text', ' in', ' any', '\n', 'language', ',', ' any', ' script', ',', ' any', ' direction', '.', ' It', ' was', ' truly', ' universal', '.', ' ✨\n']
+      Ref: ['Once', ' upon', ' a', ' time', ' in', ' a', ' café', ' (', 'una', ' volta', ' in', ' un', ' caffè', ',', ' 从前在一家咖啡馆', '),\n', 'there', ' lived', ' a', ' programmer', ' 👨\u200d💻', ' who', ' spoke', ' many', ' languages', '.', ' He', ' could', ' say', '\n', '"Hello', '"', ' in', ' English', ',', ' "', '你好', '"', ' in', ' Chinese', ',', ' "', 'こんにちは', '"', ' in', ' Japanese', ',\n', '"مرحبا', '"', ' in', ' Arabic', ',', ' "', 'Привет', '"', ' in', ' Russian', ',', ' and', ' "', '안녕하세요', '"', ' in', ' Korean', '.\n\n', 'One', ' day', ',', ' he', ' decided', ' to', ' write', ' a', ' program', ' that', ' could', ' handle', ' all', ' these', '\n', 'scripts', ' simultaneously', '.', ' It', ' wasn', "'t", ' easy', '—he', ' had', ' to', ' deal', ' with', ' RTL', ' text', '\n', '(like', ' العربية', ' and', ' עברית', '),', ' complex', ' emoji', ' sequences', ' (', 'like', ' 👨\u200d👩\u200d👧\u200d👦', ' and', '\n', '🏳️\u200d🌈),', ' combining', ' diacritics', ' (', 'like', ' é', ' vs', ' é', '),', ' and', ' even', ' mathematical', '\n', 'symbols', ' (∀', 'x', ' ∈', ' ℝ', ':', ' x', '²', ' ≥', ' ', '0', ').\n\n', 'But', ' in', ' the', ' end', ',', ' he', ' succeeded', '!', ' 🎉', ' His', ' program', ' could', ' process', ' text', ' in', ' any', '\n', 'language', ',', ' any', ' script', ',', ' any', ' direction', '.', ' It', ' was', ' truly', ' universal', '.', ' ✨\n']
+[OK] '1 + 1'
+      C++: ['1', ' +', ' ', '1']
+      Ref: ['1', ' +', ' ', '1']
+[OK] '2 * 3'
+      C++: ['2', ' *', ' ', '3']
+      Ref: ['2', ' *', ' ', '3']
+[OK] '10 / 5'
+      C++: ['1', '0', ' /', ' ', '5']
+      Ref: ['1', '0', ' /', ' ', '5']
+[OK] '7 - 4'
+      C++: ['7', ' -', ' ', '4']
+      Ref: ['7', ' -', ' ', '4']
+[OK] '2^3'
+      C++: ['2', '^', '3']
+      Ref: ['2', '^', '3']
+[OK] 'x + y'
+      C++: ['x', ' +', ' y']
+      Ref: ['x', ' +', ' y']
+[OK] 'a * b + c'
+      C++: ['a', ' *', ' b', ' +', ' c']
+      Ref: ['a', ' *', ' b', ' +', ' c']
+[OK] '2x + 3y'
+      C++: ['2', 'x', ' +', ' ', '3', 'y']
+      Ref: ['2', 'x', ' +', ' ', '3', 'y']
+[OK] 'f(x)'
+      C++: ['f', '(x', ')']
+      Ref: ['f', '(x', ')']
+[OK] 'x^2'
+      C++: ['x', '^', '2']
+      Ref: ['x', '^', '2']
+[OK] 'y = mx + b'
+      C++: ['y', ' =', ' mx', ' +', ' b']
+      Ref: ['y', ' =', ' mx', ' +', ' b']
+[OK] 'x^2 + y^2 = r^2'
+      C++: ['x', '^', '2', ' +', ' y', '^', '2', ' =', ' r', '^', '2']
+      Ref: ['x', '^', '2', ' +', ' y', '^', '2', ' =', ' r', '^', '2']
+[OK] 'E = mc^2'
+      C++: ['E', ' =', ' mc', '^', '2']
+      Ref: ['E', ' =', ' mc', '^', '2']
+[OK] 'a^2 + b^2 = c^2'
+      C++: ['a', '^', '2', ' +', ' b', '^', '2', ' =', ' c', '^', '2']
+      Ref: ['a', '^', '2', ' +', ' b', '^', '2', ' =', ' c', '^', '2']
+[OK] 'f(x) = x^2 + 2x + 1'
+      C++: ['f', '(x', ')', ' =', ' x', '^', '2', ' +', ' ', '2', 'x', ' +', ' ', '1']
+      Ref: ['f', '(x', ')', ' =', ' x', '^', '2', ' +', ' ', '2', 'x', ' +', ' ', '1']
+[OK] '(a + b)(c + d)'
+      C++: ['(a', ' +', ' b', ')(', 'c', ' +', ' d', ')']
+      Ref: ['(a', ' +', ' b', ')(', 'c', ' +', ' d', ')']
+[OK] 'x^2 - 2xy + y^2'
+      C++: ['x', '^', '2', ' -', ' ', '2', 'xy', ' +', ' y', '^', '2']
+      Ref: ['x', '^', '2', ' -', ' ', '2', 'xy', ' +', ' y', '^', '2']
+[OK] 'sqrt(x^2 + y^2)'
+      C++: ['sqrt', '(x', '^', '2', ' +', ' y', '^', '2', ')']
+      Ref: ['sqrt', '(x', '^', '2', ' +', ' y', '^', '2', ')']
+[OK] 'log(x) + ln(y)'
+      C++: ['log', '(x', ')', ' +', ' ln', '(y', ')']
+      Ref: ['log', '(x', ')', ' +', ' ln', '(y', ')']
+[OK] 'sin(x) + cos(y)'
+      C++: ['sin', '(x', ')', ' +', ' cos', '(y', ')']
+      Ref: ['sin', '(x', ')', ' +', ' cos', '(y', ')']
+[OK] 'dy/dx'
+      C++: ['dy', '/dx']
+      Ref: ['dy', '/dx']
+[OK] 'd^2y/dx^2'
+      C++: ['d', '^', '2', 'y', '/dx', '^', '2']
+      Ref: ['d', '^', '2', 'y', '/dx', '^', '2']
+[OK] '∂f/∂x'
+      C++: ['∂f', '/∂', 'x']
+      Ref: ['∂f', '/∂', 'x']
+[OK] 'lim(x->0) f(x)'
+      C++: ['lim', '(x', '->', '0', ')', ' f', '(x', ')']
+      Ref: ['lim', '(x', '->', '0', ')', ' f', '(x', ')']
+[OK] '∫ x dx'
+      C++: ['∫', ' x', ' dx']
+      Ref: ['∫', ' x', ' dx']
+[OK] 'α + β = γ'
+      C++: ['α', ' +', ' β', ' =', ' γ']
+      Ref: ['α', ' +', ' β', ' =', ' γ']
+[OK] 'θ = 2πr'
+      C++: ['θ', ' =', ' ', '2', 'πr']
+      Ref: ['θ', ' =', ' ', '2', 'πr']
+[OK] 'Δx = x₂ - x₁'
+      C++: ['Δx', ' =', ' x', '₂', ' -', ' x', '₁']
+      Ref: ['Δx', ' =', ' x', '₂', ' -', ' x', '₁']
+[OK] '∑ᵢ xᵢ'
+      C++: ['∑ᵢ', ' xᵢ']
+      Ref: ['∑ᵢ', ' xᵢ']
+[OK] '∏ᵢ aᵢ'
+      C++: ['∏ᵢ', ' aᵢ']
+      Ref: ['∏ᵢ', ' aᵢ']
+[OK] 'Quadratic formula: x = (-b ± sqrt(b^2 - 4ac)) / (2a)\n'
+      C++: ['Quadratic', ' formula', ':', ' x', ' =', ' (-', 'b', ' ±', ' sqrt', '(b', '^', '2', ' -', ' ', '4', 'ac', '))', ' /', ' (', '2', 'a', ')\n']
+      Ref: ['Quadratic', ' formula', ':', ' x', ' =', ' (-', 'b', ' ±', ' sqrt', '(b', '^', '2', ' -', ' ', '4', 'ac', '))', ' /', ' (', '2', 'a', ')\n']
+[OK] 'Pythagorean theorem: In a right triangle, a^2 + b^2 = c^2,\nwhere c is the hypotenuse.\n'
+      C++: ['Pythagorean', ' theorem', ':', ' In', ' a', ' right', ' triangle', ',', ' a', '^', '2', ' +', ' b', '^', '2', ' =', ' c', '^', '2', ',\n', 'where', ' c', ' is', ' the', ' hypotenuse', '.\n']
+      Ref: ['Pythagorean', ' theorem', ':', ' In', ' a', ' right', ' triangle', ',', ' a', '^', '2', ' +', ' b', '^', '2', ' =', ' c', '^', '2', ',\n', 'where', ' c', ' is', ' the', ' hypotenuse', '.\n']
+[OK] "Euler's identity: e^(iπ) + 1 = 0\nThis is often called the most beautiful equation in mathematics.\n"
+      C++: ['Euler', "'s", ' identity', ':', ' e', '^(', 'iπ', ')', ' +', ' ', '1', ' =', ' ', '0', '\n', 'This', ' is', ' often', ' called', ' the', ' most', ' beautiful', ' equation', ' in', ' mathematics', '.\n']
+      Ref: ['Euler', "'s", ' identity', ':', ' e', '^(', 'iπ', ')', ' +', ' ', '1', ' =', ' ', '0', '\n', 'This', ' is', ' often', ' called', ' the', ' most', ' beautiful', ' equation', ' in', ' mathematics', '.\n']
+[OK] 'Set notation: A ∪ B, A ∩ B, A ⊂ B, A ⊆ B\nLogic: ∀x ∈ ℝ, ∃y ∈ ℝ: y > x\nImplication: P → Q, P ⇒ Q, P ⇔ Q\n'
+      C++: ['Set', ' notation', ':', ' A', ' ∪', ' B', ',', ' A', ' ∩', ' B', ',', ' A', ' ⊂', ' B', ',', ' A', ' ⊆', ' B', '\n', 'Logic', ':', ' ∀', 'x', ' ∈', ' ℝ', ',', ' ∃', 'y', ' ∈', ' ℝ', ':', ' y', ' >', ' x', '\n', 'Implication', ':', ' P', ' →', ' Q', ',', ' P', ' ⇒', ' Q', ',', ' P', ' ⇔', ' Q', '\n']
+      Ref: ['Set', ' notation', ':', ' A', ' ∪', ' B', ',', ' A', ' ∩', ' B', ',', ' A', ' ⊂', ' B', ',', ' A', ' ⊆', ' B', '\n', 'Logic', ':', ' ∀', 'x', ' ∈', ' ℝ', ',', ' ∃', 'y', ' ∈', ' ℝ', ':', ' y', ' >', ' x', '\n', 'Implication', ':', ' P', ' →', ' Q', ',', ' P', ' ⇒', ' Q', ',', ' P', ' ⇔', ' Q', '\n']
+[OK] 'Matrix multiplication: C = AB\nDeterminant: det(A) = |A|\nTranspose: A^T\nInverse: A^(-1)\nEigenvalues: Av = λv\n'
+      C++: ['Matrix', ' multiplication', ':', ' C', ' =', ' AB', '\n', 'Determinant', ':', ' det', '(A', ')', ' =', ' |', 'A', '|\n', 'Transpose', ':', ' A', '^T', '\n', 'Inverse', ':', ' A', '^(-', '1', ')\n', 'Eigenvalues', ':', ' Av', ' =', ' λv', '\n']
+      Ref: ['Matrix', ' multiplication', ':', ' C', ' =', ' AB', '\n', 'Determinant', ':', ' det', '(A', ')', ' =', ' |', 'A', '|\n', 'Transpose', ':', ' A', '^T', '\n', 'Inverse', ':', ' A', '^(-', '1', ')\n', 'Eigenvalues', ':', ' Av', ' =', ' λv', '\n']
+[OK] 'Derivative rules:\nd/dx[x^n] = nx^(n-1)\nd/dx[e^x] = e^x\nd/dx[ln(x)] = 1/x\nd/dx[sin(x)] = cos(x)\n'
+      C++: ['Derivative', ' rules', ':\n', 'd', '/dx', '[x', '^n', ']', ' =', ' nx', '^(', 'n', '-', '1', ')\n', 'd', '/dx', '[e', '^x', ']', ' =', ' e', '^x', '\n', 'd', '/dx', '[ln', '(x', ')]', ' =', ' ', '1', '/x', '\n', 'd', '/dx', '[sin', '(x', ')]', ' =', ' cos', '(x', ')\n']
+      Ref: ['Derivative', ' rules', ':\n', 'd', '/dx', '[x', '^n', ']', ' =', ' nx', '^(', 'n', '-', '1', ')\n', 'd', '/dx', '[e', '^x', ']', ' =', ' e', '^x', '\n', 'd', '/dx', '[ln', '(x', ')]', ' =', ' ', '1', '/x', '\n', 'd', '/dx', '[sin', '(x', ')]', ' =', ' cos', '(x', ')\n']
+[OK] 'Integral formulas:\n∫ x^n dx = (x^(n+1))/(n+1) + C\n∫ e^x dx = e^x + C\n∫ 1/x dx = ln|x| + C\n∫₀^∞ e^(-x) dx = 1\n'
+      C++: ['Integral', ' formulas', ':\n', '∫', ' x', '^n', ' dx', ' =', ' (', 'x', '^(', 'n', '+', '1', '))/(', 'n', '+', '1', ')', ' +', ' C', '\n', '∫', ' e', '^x', ' dx', ' =', ' e', '^x', ' +', ' C', '\n', '∫', ' ', '1', '/x', ' dx', ' =', ' ln', '|x', '|', ' +', ' C', '\n', '∫', '₀', '^∞', ' e', '^(-', 'x', ')', ' dx', ' =', ' ', '1', '\n']
+      Ref: ['Integral', ' formulas', ':\n', '∫', ' x', '^n', ' dx', ' =', ' (', 'x', '^(', 'n', '+', '1', '))/(', 'n', '+', '1', ')', ' +', ' C', '\n', '∫', ' e', '^x', ' dx', ' =', ' e', '^x', ' +', ' C', '\n', '∫', ' ', '1', '/x', ' dx', ' =', ' ln', '|x', '|', ' +', ' C', '\n', '∫', '₀', '^∞', ' e', '^(-', 'x', ')', ' dx', ' =', ' ', '1', '\n']
+[OK] "Taylor series expansion:\nf(x) = f(a) + f'(a)(x-a) + (f''(a)/2!)(x-a)^2 + (f'''(a)/3!)(x-a)^3 + ...\n\nFor e^x: e^x = 1 + x + x^2/2! + x^3/3! + x^4/4! + ...\n"
+      C++: ['Taylor', ' series', ' expansion', ':\n', 'f', '(x', ')', ' =', ' f', '(a', ')', ' +', ' f', "'(", 'a', ')(', 'x', '-a', ')', ' +', ' (', 'f', "''(", 'a', ')/', '2', '!)(', 'x', '-a', ')^', '2', ' +', ' (', 'f', "'''(", 'a', ')/', '3', '!)(', 'x', '-a', ')^', '3', ' +', ' ...\n\n', 'For', ' e', '^x', ':', ' e', '^x', ' =', ' ', '1', ' +', ' x', ' +', ' x', '^', '2', '/', '2', '!', ' +', ' x', '^', '3', '/', '3', '!', ' +', ' x', '^', '4', '/', '4', '!', ' +', ' ...\n']
+      Ref: ['Taylor', ' series', ' expansion', ':\n', 'f', '(x', ')', ' =', ' f', '(a', ')', ' +', ' f', "'(", 'a', ')(', 'x', '-a', ')', ' +', ' (', 'f', "''(", 'a', ')/', '2', '!)(', 'x', '-a', ')^', '2', ' +', ' (', 'f', "'''(", 'a', ')/', '3', '!)(', 'x', '-a', ')^', '3', ' +', ' ...\n\n', 'For', ' e', '^x', ':', ' e', '^x', ' =', ' ', '1', ' +', ' x', ' +', ' x', '^', '2', '/', '2', '!', ' +', ' x', '^', '3', '/', '3', '!', ' +', ' x', '^', '4', '/', '4', '!', ' +', ' ...\n']
+[OK] 'Fourier transform:\nF(ω) = ∫₋∞^∞ f(t)e^(-iωt) dt\n\nInverse Fourier transform:\nf(t) = (1/2π) ∫₋∞^∞ F(ω)e^(iωt) dω\n'
+      C++: ['Fourier', ' transform', ':\n', 'F', '(ω', ')', ' =', ' ∫₋∞^∞', ' f', '(t', ')e', '^(-', 'iωt', ')', ' dt', '\n\n', 'Inverse', ' Fourier', ' transform', ':\n', 'f', '(t', ')', ' =', ' (', '1', '/', '2', 'π', ')', ' ∫₋∞^∞', ' F', '(ω', ')e', '^(', 'iωt', ')', ' dω', '\n']
+      Ref: ['Fourier', ' transform', ':\n', 'F', '(ω', ')', ' =', ' ∫₋∞^∞', ' f', '(t', ')e', '^(-', 'iωt', ')', ' dt', '\n\n', 'Inverse', ' Fourier', ' transform', ':\n', 'f', '(t', ')', ' =', ' (', '1', '/', '2', 'π', ')', ' ∫₋∞^∞', ' F', '(ω', ')e', '^(', 'iωt', ')', ' dω', '\n']
+[OK] 'First-order linear ODE: dy/dx + P(x)y = Q(x)\n\nSecond-order linear ODE: d²y/dx² + P(x)dy/dx + Q(x)y = R(x)\n\nHeat equation: ∂u/∂t = α(∂²u/∂x²)\n\nWave equation: ∂²u/∂t² = c²(∂²u/∂x²)\n'
+      C++: ['First', '-order', ' linear', ' ODE', ':', ' dy', '/dx', ' +', ' P', '(x', ')y', ' =', ' Q', '(x', ')\n\n', 'Second', '-order', ' linear', ' ODE', ':', ' d', '²', 'y', '/dx', '²', ' +', ' P', '(x', ')dy', '/dx', ' +', ' Q', '(x', ')y', ' =', ' R', '(x', ')\n\n', 'Heat', ' equation', ':', ' ∂', 'u', '/∂', 't', ' =', ' α', '(∂', '²', 'u', '/∂', 'x', '²', ')\n\n', 'Wave', ' equation', ':', ' ∂', '²', 'u', '/∂', 't', '²', ' =', ' c', '²', '(∂', '²', 'u', '/∂', 'x', '²', ')\n']
+      Ref: ['First', '-order', ' linear', ' ODE', ':', ' dy', '/dx', ' +', ' P', '(x', ')y', ' =', ' Q', '(x', ')\n\n', 'Second', '-order', ' linear', ' ODE', ':', ' d', '²', 'y', '/dx', '²', ' +', ' P', '(x', ')dy', '/dx', ' +', ' Q', '(x', ')y', ' =', ' R', '(x', ')\n\n', 'Heat', ' equation', ':', ' ∂', 'u', '/∂', 't', ' =', ' α', '(∂', '²', 'u', '/∂', 'x', '²', ')\n\n', 'Wave', ' equation', ':', ' ∂', '²', 'u', '/∂', 't', '²', ' =', ' c', '²', '(∂', '²', 'u', '/∂', 'x', '²', ')\n']
+[OK] 'Mean: μ = (Σxᵢ)/n\nVariance: σ² = Σ(xᵢ - μ)²/n\nStandard deviation: σ = sqrt(σ²)\n\nNormal distribution: f(x) = (1/(σ√(2π))) * e^(-(x-μ)²/(2σ²))\n'
+      C++: ['Mean', ':', ' μ', ' =', ' (', 'Σxᵢ', ')/', 'n', '\n', 'Variance', ':', ' σ', '²', ' =', ' Σ', '(xᵢ', ' -', ' μ', ')', '²', '/n', '\n', 'Standard', ' deviation', ':', ' σ', ' =', ' sqrt', '(σ', '²', ')\n\n', 'Normal', ' distribution', ':', ' f', '(x', ')', ' =', ' (', '1', '/(', 'σ', '√(', '2', 'π', ')))', ' *', ' e', '^(-(', 'x', '-μ', ')', '²', '/(', '2', 'σ', '²', '))\n']
+      Ref: ['Mean', ':', ' μ', ' =', ' (', 'Σxᵢ', ')/', 'n', '\n', 'Variance', ':', ' σ', '²', ' =', ' Σ', '(xᵢ', ' -', ' μ', ')', '²', '/n', '\n', 'Standard', ' deviation', ':', ' σ', ' =', ' sqrt', '(σ', '²', ')\n\n', 'Normal', ' distribution', ':', ' f', '(x', ')', ' =', ' (', '1', '/(', 'σ', '√(', '2', 'π', ')))', ' *', ' e', '^(-(', 'x', '-μ', ')', '²', '/(', '2', 'σ', '²', '))\n']
+[OK] "Complex numbers: z = x + iy, where i² = -1\nModulus: |z| = sqrt(x² + y²)\nArgument: arg(z) = arctan(y/x)\nEuler's formula: e^(iθ) = cos(θ) + i·sin(θ)\n\nCauchy-Riemann equations:\n∂u/∂x = ∂v/∂y\n∂u/∂y = -∂v/∂x\n"
+      C++: ['Complex', ' numbers', ':', ' z', ' =', ' x', ' +', ' iy', ',', ' where', ' i', '²', ' =', ' -', '1', '\n', 'Modulus', ':', ' |', 'z', '|', ' =', ' sqrt', '(x', '²', ' +', ' y', '²', ')\n', 'Argument', ':', ' arg', '(z', ')', ' =', ' arctan', '(y', '/x', ')\n', 'Euler', "'s", ' formula', ':', ' e', '^(', 'iθ', ')', ' =', ' cos', '(θ', ')', ' +', ' i', '·sin', '(θ', ')\n\n', 'Cauchy', '-Riemann', ' equations', ':\n', '∂u', '/∂', 'x', ' =', ' ∂', 'v', '/∂', 'y', '\n', '∂u', '/∂', 'y', ' =', ' -∂', 'v', '/∂', 'x', '\n']
+      Ref: ['Complex', ' numbers', ':', ' z', ' =', ' x', ' +', ' iy', ',', ' where', ' i', '²', ' =', ' -', '1', '\n', 'Modulus', ':', ' |', 'z', '|', ' =', ' sqrt', '(x', '²', ' +', ' y', '²', ')\n', 'Argument', ':', ' arg', '(z', ')', ' =', ' arctan', '(y', '/x', ')\n', 'Euler', "'s", ' formula', ':', ' e', '^(', 'iθ', ')', ' =', ' cos', '(θ', ')', ' +', ' i', '·sin', '(θ', ')\n\n', 'Cauchy', '-Riemann', ' equations', ':\n', '∂u', '/∂', 'x', ' =', ' ∂', 'v', '/∂', 'y', '\n', '∂u', '/∂', 'y', ' =', ' -∂', 'v', '/∂', 'x', '\n']
+[OK] 'Theorem: The sum of the first n natural numbers is n(n+1)/2.\n\nProof (by induction):\nBase case: n = 1\n  Sum = 1 = 1(1+1)/2 = 1 ✓\n\nInductive step: Assume true for n = k:\n  1 + 2 + ... + k = k(k+1)/2\n\nProve for n = k+1:\n  1 + 2 + ... + k + (k+1)\n  = k(k+1)/2 + (k+1)\n  = (k(k+1) + 2(k+1))/2\n  = ((k+1)(k+2))/2\n  = (k+1)((k+1)+1)/2 ✓\n\nTherefore, by mathematical induction, the formula holds for all n ∈ ℕ. ∎\n'
+      C++: ['Theorem', ':', ' The', ' sum', ' of', ' the', ' first', ' n', ' natural', ' numbers', ' is', ' n', '(n', '+', '1', ')/', '2', '.\n\n', 'Proof', ' (', 'by', ' induction', '):\n', 'Base', ' case', ':', ' n', ' =', ' ', '1', '\n', ' ', ' Sum', ' =', ' ', '1', ' =', ' ', '1', '(', '1', '+', '1', ')/', '2', ' =', ' ', '1', ' ✓\n\n', 'Inductive', ' step', ':', ' Assume', ' true', ' for', ' n', ' =', ' k', ':\n', ' ', ' ', '1', ' +', ' ', '2', ' +', ' ...', ' +', ' k', ' =', ' k', '(k', '+', '1', ')/', '2', '\n\n', 'Prove', ' for', ' n', ' =', ' k', '+', '1', ':\n', ' ', ' ', '1', ' +', ' ', '2', ' +', ' ...', ' +', ' k', ' +', ' (', 'k', '+', '1', ')\n', ' ', ' =', ' k', '(k', '+', '1', ')/', '2', ' +', ' (', 'k', '+', '1', ')\n', ' ', ' =', ' (', 'k', '(k', '+', '1', ')', ' +', ' ', '2', '(k', '+', '1', '))/', '2', '\n', ' ', ' =', ' ((', 'k', '+', '1', ')(', 'k', '+', '2', '))/', '2', '\n', ' ', ' =', ' (', 'k', '+', '1', ')((', 'k', '+', '1', ')+', '1', ')/', '2', ' ✓\n\n', 'Therefore', ',', ' by', ' mathematical', ' induction', ',', ' the', ' formula', ' holds', ' for', ' all', ' n', ' ∈', ' ℕ', '.', ' ∎\n']
+      Ref: ['Theorem', ':', ' The', ' sum', ' of', ' the', ' first', ' n', ' natural', ' numbers', ' is', ' n', '(n', '+', '1', ')/', '2', '.\n\n', 'Proof', ' (', 'by', ' induction', '):\n', 'Base', ' case', ':', ' n', ' =', ' ', '1', '\n', ' ', ' Sum', ' =', ' ', '1', ' =', ' ', '1', '(', '1', '+', '1', ')/', '2', ' =', ' ', '1', ' ✓\n\n', 'Inductive', ' step', ':', ' Assume', ' true', ' for', ' n', ' =', ' k', ':\n', ' ', ' ', '1', ' +', ' ', '2', ' +', ' ...', ' +', ' k', ' =', ' k', '(k', '+', '1', ')/', '2', '\n\n', 'Prove', ' for', ' n', ' =', ' k', '+', '1', ':\n', ' ', ' ', '1', ' +', ' ', '2', ' +', ' ...', ' +', ' k', ' +', ' (', 'k', '+', '1', ')\n', ' ', ' =', ' k', '(k', '+', '1', ')/', '2', ' +', ' (', 'k', '+', '1', ')\n', ' ', ' =', ' (', 'k', '(k', '+', '1', ')', ' +', ' ', '2', '(k', '+', '1', '))/', '2', '\n', ' ', ' =', ' ((', 'k', '+', '1', ')(', 'k', '+', '2', '))/', '2', '\n', ' ', ' =', ' (', 'k', '+', '1', ')((', 'k', '+', '1', ')+', '1', ')/', '2', ' ✓\n\n', 'Therefore', ',', ' by', ' mathematical', ' induction', ',', ' the', ' formula', ' holds', ' for', ' all', ' n', ' ∈', ' ℕ', '.', ' ∎\n']
+[OK] 'Quantum mechanics - Schrödinger equation:\niℏ(∂ψ/∂t) = Ĥψ\n\nWhere:\n- ψ is the wave function\n- ℏ is the reduced Planck constant (h/2π)\n- Ĥ is the Hamiltonian operator: Ĥ = -(ℏ²/2m)∇² + V(r,t)\n\nTime-independent form:\nĤψ = Eψ\n\nThis is an eigenvalue equation where E represents energy eigenvalues.\n'
+      C++: ['Quantum', ' mechanics', ' -', ' Schrödinger', ' equation', ':\n', 'iℏ', '(∂', 'ψ', '/∂', 't', ')', ' =', ' Ĥψ', '\n\n', 'Where', ':\n', '-', ' ψ', ' is', ' the', ' wave', ' function', '\n', '-', ' ℏ', ' is', ' the', ' reduced', ' Planck', ' constant', ' (', 'h', '/', '2', 'π', ')\n', '-', ' Ĥ', ' is', ' the', ' Hamiltonian', ' operator', ':', ' Ĥ', ' =', ' -(', 'ℏ', '²', '/', '2', 'm', ')∇', '²', ' +', ' V', '(r', ',t', ')\n\n', 'Time', '-independent', ' form', ':\n', 'Ĥψ', ' =', ' Eψ', '\n\n', 'This', ' is', ' an', ' eigenvalue', ' equation', ' where', ' E', ' represents', ' energy', ' eigenvalues', '.\n']
+      Ref: ['Quantum', ' mechanics', ' -', ' Schrödinger', ' equation', ':\n', 'iℏ', '(∂', 'ψ', '/∂', 't', ')', ' =', ' Ĥψ', '\n\n', 'Where', ':\n', '-', ' ψ', ' is', ' the', ' wave', ' function', '\n', '-', ' ℏ', ' is', ' the', ' reduced', ' Planck', ' constant', ' (', 'h', '/', '2', 'π', ')\n', '-', ' Ĥ', ' is', ' the', ' Hamiltonian', ' operator', ':', ' Ĥ', ' =', ' -(', 'ℏ', '²', '/', '2', 'm', ')∇', '²', ' +', ' V', '(r', ',t', ')\n\n', 'Time', '-independent', ' form', ':\n', 'Ĥψ', ' =', ' Eψ', '\n\n', 'This', ' is', ' an', ' eigenvalue', ' equation', ' where', ' E', ' represents', ' energy', ' eigenvalues', '.\n']
+[OK] "'s't're've'm'll'd"
+      C++: ["'s", "'t", "'re", "'ve", "'m", "'ll", "'d"]
+      Ref: ["'s", "'t", "'re", "'ve", "'m", "'ll", "'d"]
+[OK] "we'll'll'll go"
+      C++: ['we', "'ll", "'ll", "'ll", ' go']
+      Ref: ['we', "'ll", "'ll", "'ll", ' go']
+[OK] "'d've been there"
+      C++: ["'d", "'ve", ' been', ' there']
+      Ref: ["'d", "'ve", ' been', ' there']
+[OK] "'s"
+      C++: ["'s"]
+      Ref: ["'s"]
+[OK] "'t"
+      C++: ["'t"]
+      Ref: ["'t"]
+[OK] "end's"
+      C++: ['end', "'s"]
+      Ref: ['end', "'s"]
+[OK] "test'd"
+      C++: ['test', "'d"]
+      Ref: ['test', "'d"]
+[OK] "'S'T'RE'VE'M'LL'D"
+      C++: ["'S", "'T", "'RE", "'VE", "'M", "'LL", "'D"]
+      Ref: ["'S", "'T", "'RE", "'VE", "'M", "'LL", "'D"]
+[OK] "IT'S DON'T WON'T"
+      C++: ['IT', "'S", ' DON', "'T", ' WON', "'T"]
+      Ref: ['IT', "'S", ' DON', "'T", ' WON', "'T"]
+[OK] "MiXeD'S CaSe'T"
+      C++: ['MiXeD', "'S", ' CaSe', "'T"]
+      Ref: ['MiXeD', "'S", ' CaSe', "'T"]
+[OK] " 's 't 're "
+      C++: [" '", 's', " '", 't', " '", 're', ' ']
+      Ref: [" '", 's', " '", 't', " '", 're', ' ']
+[OK] "('s)['t]{'re}"
+      C++: ["('", 's', ")['", 't', "]{'", 're', '}']
+      Ref: ["('", 's', ")['", 't', "]{'", 're', '}']
+[OK] 'a  b   c    d'
+      C++: ['a', ' ', ' b', '  ', ' c', '   ', ' d']
+      Ref: ['a', ' ', ' b', '  ', ' c', '   ', ' d']
+[OK] 'tab\ttab\t\ttab'
+      C++: ['tab', '\ttab', '\t', '\ttab']
+      Ref: ['tab', '\ttab', '\t', '\ttab']
+[OK] 'mixed \t \t space'
+      C++: ['mixed', ' \t \t', ' space']
+      Ref: ['mixed', ' \t \t', ' space']
+[OK] '   leading'
+      C++: ['  ', ' leading']
+      Ref: ['  ', ' leading']
+[OK] 'trailing   '
+      C++: ['trailing', '   ']
+      Ref: ['trailing', '   ']
+[OK] '   both   '
+      C++: ['  ', ' both', '   ']
+      Ref: ['  ', ' both', '   ']
+[OK] 'line1\nline2'
+      C++: ['line', '1', '\n', 'line', '2']
+      Ref: ['line', '1', '\n', 'line', '2']
+[OK] 'line1\r\nline2'
+      C++: ['line', '1', '\r\n', 'line', '2']
+      Ref: ['line', '1', '\r\n', 'line', '2']
+[OK] 'line1\rline2'
+      C++: ['line', '1', '\r', 'line', '2']
+      Ref: ['line', '1', '\r', 'line', '2']
+[OK] '\n\n\nmultiple\n\n\n'
+      C++: ['\n\n\n', 'multiple', '\n\n\n']
+      Ref: ['\n\n\n', 'multiple', '\n\n\n']
+[OK] '\r\n\r\n\r\n'
+      C++: ['\r\n\r\n\r\n']
+      Ref: ['\r\n\r\n\r\n']
+[OK] ' \n \n \n '
+      C++: [' \n \n \n', ' ']
+      Ref: [' \n \n \n', ' ']
+[OK] 'word   '
+      C++: ['word', '   ']
+      Ref: ['word', '   ']
+[OK] '123   '
+      C++: ['1', '2', '3', '   ']
+      Ref: ['1', '2', '3', '   ']
+[OK] '!!!   '
+      C++: ['!!!', '   ']
+      Ref: ['!!!', '   ']
+[OK] "'s   "
+      C++: ["'s", '   ']
+      Ref: ["'s", '   ']
+[OK] '0'
+      C++: ['0']
+      Ref: ['0']
+[OK] '1 2 3 4 5 6 7 8 9'
+      C++: ['1', ' ', '2', ' ', '3', ' ', '4', ' ', '5', ' ', '6', ' ', '7', ' ', '8', ' ', '9']
+      Ref: ['1', ' ', '2', ' ', '3', ' ', '4', ' ', '5', ' ', '6', ' ', '7', ' ', '8', ' ', '9']
+[OK] 'a1b2c3d4e5'
+      C++: ['a', '1', 'b', '2', 'c', '3', 'd', '4', 'e', '5']
+      Ref: ['a', '1', 'b', '2', 'c', '3', 'd', '4', 'e', '5']
+[OK] '1'
+      C++: ['1']
+      Ref: ['1']
+[OK] '12'
+      C++: ['1', '2']
+      Ref: ['1', '2']
+[OK] '123'
+      C++: ['1', '2', '3']
+      Ref: ['1', '2', '3']
+[OK] '1234'
+      C++: ['1', '2', '3', '4']
+      Ref: ['1', '2', '3', '4']
+[OK] '12345'
+      C++: ['1', '2', '3', '4', '5']
+      Ref: ['1', '2', '3', '4', '5']
+[OK] '123456789'
+      C++: ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+      Ref: ['1', '2', '3', '4', '5', '6', '7', '8', '9']
+[OK] '1 22 333 4444'
+      C++: ['1', ' ', '2', '2', ' ', '3', '3', '3', ' ', '4', '4', '4', '4']
+      Ref: ['1', ' ', '2', '2', ' ', '3', '3', '3', ' ', '4', '4', '4', '4']
+[OK] '123abc'
+      C++: ['1', '2', '3', 'abc']
+      Ref: ['1', '2', '3', 'abc']
+[OK] 'abc123'
+      C++: ['abc', '1', '2', '3']
+      Ref: ['abc', '1', '2', '3']
+[OK] '123!@#'
+      C++: ['1', '2', '3', '!@#']
+      Ref: ['1', '2', '3', '!@#']
+[OK] '!@#123'
+      C++: ['!@#', '1', '2', '3']
+      Ref: ['!@#', '1', '2', '3']
+[OK] '999999999999999999999999'
+      C++: ['9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9']
+      Ref: ['9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9', '9']
+[OK] '1000000000000000000000000'
+      C++: ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']
+      Ref: ['1', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0']
+[OK] '!!!'
+      C++: ['!!!']
+      Ref: ['!!!']
+[OK] '???'
+      C++: ['???']
+      Ref: ['???']
+[OK] '...'
+      C++: ['...']
+      Ref: ['...']
+[OK] '!?!?'
+      C++: ['!?!?']
+      Ref: ['!?!?']
+[OK] '---'
+      C++: ['---']
+      Ref: ['---']
+[OK] '___'
+      C++: ['___']
+      Ref: ['___']
+[OK] '***'
+      C++: ['***']
+      Ref: ['***']
+[OK] '!@#$%^&*()'
+      C++: ['!@#$%^&*()']
+      Ref: ['!@#$%^&*()']
+[OK] '{}[]()<>'
+      C++: ['{}[]()<>']
+      Ref: ['{}[]()<>']
+[OK] '~`|\\/@'
+      C++: ['~`|\\/@']
+      Ref: ['~`|\\/@']
+[OK] ',;:\'"'
+      C++: [',;:\'"']
+      Ref: [',;:\'"']
+[OK] ' ! ? .'
+      C++: [' !', ' ?', ' .']
+      Ref: [' !', ' ?', ' .']
+[OK] 'word!word'
+      C++: ['word', '!word']
+      Ref: ['word', '!word']
+[OK] 'word ! word'
+      C++: ['word', ' !', ' word']
+      Ref: ['word', ' !', ' word']
+[OK] ' !word'
+      C++: [' !', 'word']
+      Ref: [' !', 'word']
+[OK] 'word! '
+      C++: ['word', '!', ' ']
+      Ref: ['word', '!', ' ']
+[OK] 'path/to/file'
+      C++: ['path', '/to', '/file']
+      Ref: ['path', '/to', '/file']
+[OK] 'path/to/file/'
+      C++: ['path', '/to', '/file', '/']
+      Ref: ['path', '/to', '/file', '/']
+[OK] 'path/\nto/\nfile'
+      C++: ['path', '/\n', 'to', '/\n', 'file']
+      Ref: ['path', '/\n', 'to', '/\n', 'file']
+[OK] '////'
+      C++: ['////']
+      Ref: ['////']
+[OK] '/\n/\n/\n'
+      C++: ['/\n', '/\n', '/\n']
+      Ref: ['/\n', '/\n', '/\n']
+[OK] 'camelCase'
+      C++: ['camelCase']
+      Ref: ['camelCase']
+[OK] 'PascalCase'
+      C++: ['PascalCase']
+      Ref: ['PascalCase']
+[OK] 'SCREAMING_SNAKE_CASE'
+      C++: ['SCREAMING', '_SNAKE', '_CASE']
+      Ref: ['SCREAMING', '_SNAKE', '_CASE']
+[OK] 'snake_case'
+      C++: ['snake', '_case']
+      Ref: ['snake', '_case']
+[OK] 'kebab-case'
+      C++: ['kebab', '-case']
+      Ref: ['kebab', '-case']
+[OK] 'camelCaseWithNumbers123'
+      C++: ['camelCaseWithNumbers', '1', '2', '3']
+      Ref: ['camelCaseWithNumbers', '1', '2', '3']
+[OK] 'CONSTANT_VALUE_2024'
+      C++: ['CONSTANT', '_VALUE', '_', '2', '0', '2', '4']
+      Ref: ['CONSTANT', '_VALUE', '_', '2', '0', '2', '4']
+[OK] 'ABCdef'
+      C++: ['ABCdef']
+      Ref: ['ABCdef']
+[OK] 'XMLHttpRequest'
+      C++: ['XMLHttpRequest']
+      Ref: ['XMLHttpRequest']
+[OK] 'JSONParser'
+      C++: ['JSONParser']
+      Ref: ['JSONParser']
+[OK] 'HTTPSConnection'
+      C++: ['HTTPSConnection']
+      Ref: ['HTTPSConnection']
+[OK] 'AaAaAa'
+      C++: ['AaAaAa']
+      Ref: ['AaAaAa']
+[OK] 'aAaAaA'
+      C++: ['aAaAaA']
+      Ref: ['aAaAaA']
+[OK] 'ABCDEFGabcdefg'
+      C++: ['ABCDEFGabcdefg']
+      Ref: ['ABCDEFGabcdefg']
+[OK] ''
+      C++: []
+      Ref: []
+[OK] ' '
+      C++: [' ']
+      Ref: [' ']
+[OK] '\n'
+      C++: ['\n']
+      Ref: ['\n']
+[OK] '\t'
+      C++: ['\t']
+      Ref: ['\t']
+[OK] 'a'
+      C++: ['a']
+      Ref: ['a']
+[OK] '1'
+      C++: ['1']
+      Ref: ['1']
+[OK] '!'
+      C++: ['!']
+      Ref: ['!']
+[OK] "'"
+      C++: ["'"]
+      Ref: ["'"]
+[OK] 'hello'
+      C++: ['hello']
+      Ref: ['hello']
+[OK] ' hello'
+      C++: [' hello']
+      Ref: [' hello']
+[OK] '世界'
+      C++: ['世界']
+      Ref: ['世界']
+[OK] ' 世界'
+      C++: [' 世界']
+      Ref: [' 世界']
+[OK] 'hello世界مرحبا'
+      C++: ['hello世界مرحبا']
+      Ref: ['hello世界مرحبا']
+[OK] 'ABC中文123'
+      C++: ['ABC中文', '1', '2', '3']
+      Ref: ['ABC中文', '1', '2', '3']
+[OK] 'café'
+      C++: ['café']
+      Ref: ['café']
+[OK] 'naïve'
+      C++: ['naïve']
+      Ref: ['naïve']
+[OK] 'Zürich'
+      C++: ['Zürich']
+      Ref: ['Zürich']
+[OK] 'é'
+      C++: ['e', '́']
+      Ref: ['e', '́']
+[OK] '123'
+      C++: ['1', '2', '3']
+      Ref: ['1', '2', '3']
+[OK] '١٢٣'
+      C++: ['١', '٢', '٣']
+      Ref: ['١', '٢', '٣']
+[OK] '一二三'
+      C++: ['一二三']
+      Ref: ['一二三']
+[OK] '123٤٥٦789'
+      C++: ['1', '2', '3', '٤', '٥', '٦', '7', '8', '9']
+      Ref: ['1', '2', '3', '٤', '٥', '٦', '7', '8', '9']
+[OK] 'مرحبا123عالم'
+      C++: ['مرحبا', '1', '2', '3', 'عالم']
+      Ref: ['مرحبا', '1', '2', '3', 'عالم']
+[OK] 'hello مرحبا world'
+      C++: ['hello', ' مرحبا', ' world']
+      Ref: ['hello', ' مرحبا', ' world']
+[OK] '123مرحبا456'
+      C++: ['1', '2', '3', 'مرحبا', '4', '5', '6']
+      Ref: ['1', '2', '3', 'مرحبا', '4', '5', '6']
+[OK] 'emoji👋here'
+      C++: ['emoji', '👋here']
+      Ref: ['emoji', '👋here']
+[OK] '👋'
+      C++: ['👋']
+      Ref: ['👋']
+[OK] 'text 👋 text'
+      C++: ['text', ' 👋', ' text']
+      Ref: ['text', ' 👋', ' text']
+[OK] '👋👋👋'
+      C++: ['👋👋👋']
+      Ref: ['👋👋👋']
+[OK] 'hello\u200bworld'
+      C++: ['hello', '\u200bworld']
+      Ref: ['hello', '\u200bworld']
+[OK] 'test\u200ctest'
+      C++: ['test', '\u200ctest']
+      Ref: ['test', '\u200ctest']
+[OK] 'join\u200dtogether'
+      C++: ['join', '\u200dtogether']
+      Ref: ['join', '\u200dtogether']
+[OK] "'s123!!! test"
+      C++: ["'s", '1', '2', '3', '!!!', ' test']
+      Ref: ["'s", '1', '2', '3', '!!!', ' test']
+[OK] "  \n\t'RE  MiXeD  \t\n  "
+      C++: ['  \n', '\t', "'RE", ' ', ' MiXeD', '  \t\n', '  ']
+      Ref: ['  \n', '\t', "'RE", ' ', ' MiXeD', '  \t\n', '  ']
+[OK] "word1 'word2' word3"
+      C++: ['word', '1', " '", 'word', '2', "'", ' word', '3']
+      Ref: ['word', '1', " '", 'word', '2', "'", ' word', '3']
+[OK] 'test---test...test'
+      C++: ['test', '---', 'test', '...', 'test']
+      Ref: ['test', '---', 'test', '...', 'test']
+[OK] 'a1!a2@a3#a4$'
+      C++: ['a', '1', '!a', '2', '@a', '3', '#a', '4', '$']
+      Ref: ['a', '1', '!a', '2', '@a', '3', '#a', '4', '$']
+[OK] 'w 1 ! w 2 @ w 3'
+      C++: ['w', ' ', '1', ' !', ' w', ' ', '2', ' @', ' w', ' ', '3']
+      Ref: ['w', ' ', '1', ' !', ' w', ' ', '2', ' @', ' w', ' ', '3']
+[OK] "'s1!'t2@'re3#"
+      C++: ["'s", '1', "!'", 't', '2', "@'", 're', '3', '#']
+      Ref: ["'s", '1', "!'", 't', '2', "@'", 're', '3', '#']
+[OK] 'a!b@c#d$e%f^g&h*i(j)k'
+      C++: ['a', '!b', '@c', '#d', '$e', '%f', '^g', '&h', '*i', '(j', ')k']
+      Ref: ['a', '!b', '@c', '#d', '$e', '%f', '^g', '&h', '*i', '(j', ')k']
+[OK] '1a2b3c4d5e6f7g8h9i0'
+      C++: ['1', 'a', '2', 'b', '3', 'c', '4', 'd', '5', 'e', '6', 'f', '7', 'g', '8', 'h', '9', 'i', '0']
+      Ref: ['1', 'a', '2', 'b', '3', 'c', '4', 'd', '5', 'e', '6', 'f', '7', 'g', '8', 'h', '9', 'i', '0']
+[OK] "Hi!How?Are\nYou\t'D'oing?"
+      C++: ['Hi', '!How', '?Are', '\n', 'You', '\t', "'D", "'oing", '?']
+      Ref: ['Hi', '!How', '?Are', '\n', 'You', '\t', "'D", "'oing", '?']
+[OK] '\n\r\n \t \n\r'
+      C++: ['\n\r\n \t \n\r']
+      Ref: ['\n\r\n \t \n\r']
+[OK] '     \n     \n     '
+      C++: ['     \n     \n', '     ']
+      Ref: ['     \n     \n', '     ']
+[OK] '\t\t\t\n\n\n   '
+      C++: ['\t\t\t\n\n\n', '   ']
+      Ref: ['\t\t\t\n\n\n', '   ']
+[OK] '!word!'
+      C++: ['!word', '!']
+      Ref: ['!word', '!']
+[OK] '@123@'
+      C++: ['@', '1', '2', '3', '@']
+      Ref: ['@', '1', '2', '3', '@']
+[OK] "#'s#"
+      C++: ["#'", 's', '#']
+      Ref: ["#'", 's', '#']
+[OK] '!@#word!@#'
+      C++: ['!@#', 'word', '!@#']
+      Ref: ['!@#', 'word', '!@#']
+[OK] 'word'
+      C++: ['word']
+      Ref: ['word']
+[OK] ' word'
+      C++: [' word']
+      Ref: [' word']
+[OK] '  word'
+      C++: [' ', ' word']
+      Ref: [' ', ' word']
+[OK] 'word '
+      C++: ['word', ' ']
+      Ref: ['word', ' ']
+[OK] 'word  '
+      C++: ['word', '  ']
+      Ref: ['word', '  ']
+[OK] 'UPPER'
+      C++: ['UPPER']
+      Ref: ['UPPER']
+[OK] 'lower'
+      C++: ['lower']
+      Ref: ['lower']
+[OK] 'UPPERlower'
+      C++: ['UPPERlower']
+      Ref: ['UPPERlower']
+[OK] 'lowerUPPER'
+      C++: ['lowerUPPER']
+      Ref: ['lowerUPPER']
+[OK] 'MiXeD'
+      C++: ['MiXeD']
+      Ref: ['MiXeD']
+[OK] '1 22 333 4444 55555'
+      C++: ['1', ' ', '2', '2', ' ', '3', '3', '3', ' ', '4', '4', '4', '4', ' ', '5', '5', '5', '5', '5']
+      Ref: ['1', ' ', '2', '2', ' ', '3', '3', '3', ' ', '4', '4', '4', '4', ' ', '5', '5', '5', '5', '5']
+[OK] '1234567890'
+      C++: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+      Ref: ['1', '2', '3', '4', '5', '6', '7', '8', '9', '0']
+[OK] 'a1b22c333d4444'
+      C++: ['a', '1', 'b', '2', '2', 'c', '3', '3', '3', 'd', '4', '4', '4', '4']
+      Ref: ['a', '1', 'b', '2', '2', 'c', '3', '3', '3', 'd', '4', '4', '4', '4']
+[OK] "don't"
+      C++: ['don', "'t"]
+      Ref: ['don', "'t"]
+[OK] "can't"
+      C++: ['can', "'t"]
+      Ref: ['can', "'t"]
+[OK] "won't"
+      C++: ['won', "'t"]
+      Ref: ['won', "'t"]
+[OK] "it's"
+      C++: ['it', "'s"]
+      Ref: ['it', "'s"]
+[OK] "I'm"
+      C++: ['I', "'m"]
+      Ref: ['I', "'m"]
+[OK] "you're"
+      C++: ['you', "'re"]
+      Ref: ['you', "'re"]
+[OK] "they've"
+      C++: ['they', "'ve"]
+      Ref: ['they', "'ve"]
+[OK] "we'll"
+      C++: ['we', "'ll"]
+      Ref: ['we', "'ll"]
+[OK] "she'd"
+      C++: ['she', "'d"]
+      Ref: ['she', "'d"]
+[OK] "DON'T"
+      C++: ['DON', "'T"]
+      Ref: ['DON', "'T"]
+[OK] "CAN'T"
+      C++: ['CAN', "'T"]
+      Ref: ['CAN', "'T"]
+[OK] "WON'T"
+      C++: ['WON', "'T"]
+      Ref: ['WON', "'T"]
+[OK] "Bob's house"
+      C++: ['Bob', "'s", ' house']
+      Ref: ['Bob', "'s", ' house']
+[OK] "70's music"
+      C++: ['7', '0', "'s", ' music']
+      Ref: ['7', '0', "'s", ' music']
+[OK] "rock 'n' roll"
+      C++: ['rock', " '", 'n', "'", ' roll']
+      Ref: ['rock', " '", 'n', "'", ' roll']
+[OK] "'quoted text'"
+      C++: ["'quoted", ' text', "'"]
+      Ref: ["'quoted", ' text', "'"]
+[OK] "'''multiple'''"
+      C++: ["'''", 'multiple', "'''"]
+      Ref: ["'''", 'multiple', "'''"]
+[OK] "s'"
+      C++: ['s', "'"]
+      Ref: ['s', "'"]
+[OK] "t'"
+      C++: ['t', "'"]
+      Ref: ['t', "'"]
+[OK] "'s "
+      C++: ["'s", ' ']
+      Ref: ["'s", ' ']
+[OK] " 's"
+      C++: [" '", 's']
+      Ref: [" '", 's']
+[OK] 'Ææ'
+      C++: ['Ææ']
+      Ref: ['Ææ']
+[OK] 'ß'
+      C++: ['ß']
+      Ref: ['ß']
+[OK] 'Œœ'
+      C++: ['Œœ']
+      Ref: ['Œœ']
+[OK] 'ĳ'
+      C++: ['ĳ']
+      Ref: ['ĳ']
+[OK] 'Ǆǅǆ'
+      C++: ['Ǆǅǆ']
+      Ref: ['Ǆǅǆ']
+[OK] '1,234,567'
+      C++: ['1', ',', '2', '3', '4', ',', '5', '6', '7']
+      Ref: ['1', ',', '2', '3', '4', ',', '5', '6', '7']
+[OK] '1.234.567'
+      C++: ['1', '.', '2', '3', '4', '.', '5', '6', '7']
+      Ref: ['1', '.', '2', '3', '4', '.', '5', '6', '7']
+[OK] '1_234_567'
+      C++: ['1', '_', '2', '3', '4', '_', '5', '6', '7']
+      Ref: ['1', '_', '2', '3', '4', '_', '5', '6', '7']
+[OK] "1'234'567"
+      C++: ['1', "'", '2', '3', '4', "'", '5', '6', '7']
+      Ref: ['1', "'", '2', '3', '4', "'", '5', '6', '7']
+[OK] '1e10'
+      C++: ['1', 'e', '1', '0']
+      Ref: ['1', 'e', '1', '0']
+[OK] '3.14e-5'
+      C++: ['3', '.', '1', '4', 'e', '-', '5']
+      Ref: ['3', '.', '1', '4', 'e', '-', '5']
+[OK] '6.022e23'
+      C++: ['6', '.', '0', '2', '2', 'e', '2', '3']
+      Ref: ['6', '.', '0', '2', '2', 'e', '2', '3']
+[OK] '**bold**'
+      C++: ['**', 'bold', '**']
+      Ref: ['**', 'bold', '**']
+[OK] '*italic*'
+      C++: ['*italic', '*']
+      Ref: ['*italic', '*']
+[OK] '`code`'
+      C++: ['`code', '`']
+      Ref: ['`code', '`']
+[OK] '~~strikethrough~~'
+      C++: ['~~', 'strikethrough', '~~']
+      Ref: ['~~', 'strikethrough', '~~']
+[OK] '[link](url)'
+      C++: ['[link', '](', 'url', ')']
+      Ref: ['[link', '](', 'url', ')']
+[OK] '# heading'
+      C++: ['#', ' heading']
+      Ref: ['#', ' heading']
+[OK] '- list item'
+      C++: ['-', ' list', ' item']
+      Ref: ['-', ' list', ' item']
+[OK] '{"key":"value"}'
+      C++: ['{"', 'key', '":"', 'value', '"}']
+      Ref: ['{"', 'key', '":"', 'value', '"}']
+[OK] '[1,2,3]'
+      C++: ['[', '1', ',', '2', ',', '3', ']']
+      Ref: ['[', '1', ',', '2', ',', '3', ']']
+[OK] 'null'
+      C++: ['null']
+      Ref: ['null']
+[OK] 'true'
+      C++: ['true']
+      Ref: ['true']
+[OK] 'false'
+      C++: ['false']
+      Ref: ['false']
+[OK] 'http://example.com'
+      C++: ['http', '://', 'example', '.com']
+      Ref: ['http', '://', 'example', '.com']
+[OK] 'user@example.com'
+      C++: ['user', '@example', '.com']
+      Ref: ['user', '@example', '.com']
+[OK] 'https://example.com/path?query=value'
+      C++: ['https', '://', 'example', '.com', '/path', '?query', '=value']
+      Ref: ['https', '://', 'example', '.com', '/path', '?query', '=value']
+[OK] 'v1.2.3'
+      C++: ['v', '1', '.', '2', '.', '3']
+      Ref: ['v', '1', '.', '2', '.', '3']
+[OK] '2.0.0-beta.1'
+      C++: ['2', '.', '0', '.', '0', '-beta', '.', '1']
+      Ref: ['2', '.', '0', '.', '0', '-beta', '.', '1']
+[OK] '10.11.12-rc.3+build.456'
+      C++: ['1', '0', '.', '1', '1', '.', '1', '2', '-rc', '.', '3', '+build', '.', '4', '5', '6']
+      Ref: ['1', '0', '.', '1', '1', '.', '1', '2', '-rc', '.', '3', '+build', '.', '4', '5', '6']
+[OK] '2024-01-01'
+      C++: ['2', '0', '2', '4', '-', '0', '1', '-', '0', '1']
+      Ref: ['2', '0', '2', '4', '-', '0', '1', '-', '0', '1']
+[OK] '01/01/2024'
+      C++: ['0', '1', '/', '0', '1', '/', '2', '0', '2', '4']
+      Ref: ['0', '1', '/', '0', '1', '/', '2', '0', '2', '4']
+[OK] '12:34:56'
+      C++: ['1', '2', ':', '3', '4', ':', '5', '6']
+      Ref: ['1', '2', ':', '3', '4', ':', '5', '6']
+[OK] '2024-01-01T12:34:56Z'
+      C++: ['2', '0', '2', '4', '-', '0', '1', '-', '0', '1', 'T', '1', '2', ':', '3', '4', ':', '5', '6', 'Z']
+      Ref: ['2', '0', '2', '4', '-', '0', '1', '-', '0', '1', 'T', '1', '2', ':', '3', '4', ':', '5', '6', 'Z']
+[OK] '$100'
+      C++: ['$', '1', '0', '0']
+      Ref: ['$', '1', '0', '0']
+[OK] '€50'
+      C++: ['€', '5', '0']
+      Ref: ['€', '5', '0']
+[OK] '£25'
+      C++: ['£', '2', '5']
+      Ref: ['£', '2', '5']
+[OK] '¥1000'
+      C++: ['¥', '1', '0', '0', '0']
+      Ref: ['¥', '1', '0', '0', '0']
+[OK] '$1,234.56'
+      C++: ['$', '1', ',', '2', '3', '4', '.', '5', '6']
+      Ref: ['$', '1', ',', '2', '3', '4', '.', '5', '6']
+[OK] 'x+y=z'
+      C++: ['x', '+y', '=z']
+      Ref: ['x', '+y', '=z']
+[OK] 'a*b/c'
+      C++: ['a', '*b', '/c']
+      Ref: ['a', '*b', '/c']
+[OK] '2^8'
+      C++: ['2', '^', '8']
+      Ref: ['2', '^', '8']
+[OK] 'x>y<z'
+      C++: ['x', '>y', '<z']
+      Ref: ['x', '>y', '<z']
+[OK] '/usr/local/bin'
+      C++: ['/usr', '/local', '/bin']
+      Ref: ['/usr', '/local', '/bin']
+[OK] 'C:\\Windows\\System32'
+      C++: ['C', ':\\', 'Windows', '\\System', '3', '2']
+      Ref: ['C', ':\\', 'Windows', '\\System', '3', '2']
+[OK] './relative/path'
+      C++: ['./', 'relative', '/path']
+      Ref: ['./', 'relative', '/path']
+[OK] '../parent/dir'
+      C++: ['../', 'parent', '/dir']
+      Ref: ['../', 'parent', '/dir']
+[OK] 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+      C++: ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']
+      Ref: ['aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa']
+[OK] '11111111111111111111111111111111111111111111111111111111111111'
+      C++: ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+      Ref: ['1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1', '1']
+[OK] '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
+      C++: ['!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!']
+      Ref: ['!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!']
+[OK] '                                                                '
+      C++: ['                                                                ']
+      Ref: ['                                                                ']
+
+=== ALL 5 TEST(S) PASSED ===
