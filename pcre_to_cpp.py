@@ -7,13 +7,12 @@ into chunks for LLM pretokenization.
 """
 
 import argparse
-import re
 import sys
 import textwrap
 from contextlib import contextmanager
 from dataclasses import dataclass
 from string import Template
-from typing import Union, List, Tuple, Optional
+from typing import Union, Tuple, Optional
 
 # =============================================================================
 # AST Node Types
@@ -155,21 +154,19 @@ Node = Union[
 
 def nodes_equal(a: Node, b: Node) -> bool:
     """Deep equality check for AST nodes."""
-    if type(a) != type(b):
-        return False
-    if isinstance(a, LiteralChar):
+    if isinstance(a, LiteralChar) and isinstance(b, LiteralChar):
         return a.char == b.char
-    if isinstance(a, SpecialChar):
+    if isinstance(a, SpecialChar) and isinstance(b, SpecialChar):
         return a.char == b.char
-    if isinstance(a, Predefined):
+    if isinstance(a, Predefined) and isinstance(b, Predefined):
         return a.name == b.name
-    if isinstance(a, UnicodeCategory):
+    if isinstance(a, UnicodeCategory) and isinstance(b, UnicodeCategory):
         return a.category == b.category and a.negated == b.negated
-    if isinstance(a, AnyChar):
+    if isinstance(a, AnyChar) and isinstance(b, AnyChar):
         return True
-    if isinstance(a, Anchor):
+    if isinstance(a, Anchor) and isinstance(b, Anchor):
         return a.type == b.type
-    if isinstance(a, CharClass):
+    if isinstance(a, CharClass) and isinstance(b, CharClass):
         if a.negated != b.negated or len(a.items) != len(b.items):
             return False
         for x, y in zip(a.items, b.items):
@@ -182,25 +179,25 @@ def nodes_equal(a: Node, b: Node) -> bool:
             elif not nodes_equal(x, y):
                 return False
         return True
-    if isinstance(a, Quantifier):
+    if isinstance(a, Quantifier) and isinstance(b, Quantifier):
         return (a.min_count == b.min_count and
                 a.max_count == b.max_count and
                 a.greedy == b.greedy and
                 a.possessive == b.possessive and
                 nodes_equal(a.child, b.child))
-    if isinstance(a, Sequence):
+    if isinstance(a, Sequence) and isinstance(b, Sequence):
         if len(a.children) != len(b.children):
             return False
         return all(nodes_equal(x, y) for x, y in zip(a.children, b.children))
-    if isinstance(a, Alternation):
+    if isinstance(a, Alternation) and isinstance(b, Alternation):
         if len(a.alternatives) != len(b.alternatives):
             return False
         return all(nodes_equal(x, y) for x, y in zip(a.alternatives, b.alternatives))
-    if isinstance(a, GroupNode):
+    if isinstance(a, GroupNode) and isinstance(b, GroupNode):
         return (a.capturing == b.capturing and
                 a.case_insensitive == b.case_insensitive and
                 nodes_equal(a.child, b.child))
-    if isinstance(a, Lookahead):
+    if isinstance(a, Lookahead) and isinstance(b, Lookahead):
         return a.positive == b.positive and nodes_equal(a.child, b.child)
     return False
 
