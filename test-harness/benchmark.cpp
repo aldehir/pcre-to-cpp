@@ -109,6 +109,7 @@ struct Pcre2CompileResult {
     pcre2_code * regex = nullptr;
     pcre2_match_data * match_data = nullptr;
     bool success = true;
+    bool jit_available = false;
     std::string error;
 
     ~Pcre2CompileResult() {
@@ -153,7 +154,8 @@ Pcre2CompileResult compile_pcre2_regex(const std::string & pattern) {
     }
 
     // JIT compile for performance
-    pcre2_jit_compile(result.regex, PCRE2_JIT_COMPLETE);
+    int jit_rc = pcre2_jit_compile(result.regex, PCRE2_JIT_COMPLETE);
+    result.jit_available = (jit_rc == 0);
 
     // Create match data
     result.match_data = pcre2_match_data_create_from_pattern(result.regex, nullptr);
@@ -169,7 +171,7 @@ struct Pcre2Result {
 };
 
 Pcre2Result run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
-                            const std::string & text) {
+                            bool use_jit, const std::string & text) {
     Pcre2Result result;
 
     PCRE2_SIZE start_offset = 0;
@@ -177,15 +179,9 @@ Pcre2Result run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
     PCRE2_SIZE subject_length = text.length();
 
     while (start_offset < subject_length) {
-        int rc = pcre2_match(
-            re,
-            subject,
-            subject_length,
-            start_offset,
-            0,
-            match_data,
-            nullptr
-        );
+        int rc = use_jit
+            ? pcre2_jit_match(re, subject, subject_length, start_offset, 0, match_data, nullptr)
+            : pcre2_match(re, subject, subject_length, start_offset, 0, match_data, nullptr);
 
         if (rc < 0) {
             if (rc == PCRE2_ERROR_NOMATCH) break;
@@ -230,7 +226,8 @@ struct BenchmarkResult {
 // Benchmark a single string with precompiled regexes (can be nullptr if compilation failed)
 BenchmarkResult benchmark_string(const std::regex * stl_regex, const std::string & stl_error,
                                   pcre2_code * pcre2_regex, pcre2_match_data * pcre2_match_data,
-                                  const std::string & pcre2_error, const std::string & text) {
+                                  bool pcre2_jit_available, const std::string & pcre2_error,
+                                  const std::string & text) {
     BenchmarkResult result;
     result.input = text;
 
@@ -297,7 +294,7 @@ BenchmarkResult benchmark_string(const std::regex * stl_regex, const std::string
     {
         if (pcre2_regex) {
             // Warmup run
-            auto warmup_result = run_pcre2_regex(pcre2_regex, pcre2_match_data, text);
+            auto warmup_result = run_pcre2_regex(pcre2_regex, pcre2_match_data, pcre2_jit_available, text);
             result.pcre2_tokens = warmup_result.tokens;
             result.pcre2_success = warmup_result.success;
             result.pcre2_error = warmup_result.error;
@@ -310,8 +307,11 @@ BenchmarkResult benchmark_string(const std::regex * stl_regex, const std::string
                 for (int i = 0; i < BENCHMARK_ITERATIONS; i++) {
                     PCRE2_SIZE start_offset = 0;
                     while (start_offset < subject_length) {
-                        int rc = pcre2_match(pcre2_regex, subject, subject_length,
-                                             start_offset, 0, pcre2_match_data, nullptr);
+                        int rc = pcre2_jit_available
+                            ? pcre2_jit_match(pcre2_regex, subject, subject_length,
+                                              start_offset, 0, pcre2_match_data, nullptr)
+                            : pcre2_match(pcre2_regex, subject, subject_length,
+                                          start_offset, 0, pcre2_match_data, nullptr);
                         if (rc < 0) break;
                         PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(pcre2_match_data);
                         start_offset = ovector[1];
@@ -414,7 +414,8 @@ int main() {
         if (!pcre2_compile_result.success) {
             std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_error << std::endl;
         } else {
-            std::cerr << "PCRE2 Regex compile: OK" << std::endl;
+            std::cerr << "PCRE2 Regex compile: OK (JIT: "
+                      << (pcre2_compile_result.jit_available ? "enabled" : "disabled") << ")" << std::endl;
         }
         std::cerr << std::endl;
 
@@ -422,6 +423,7 @@ int main() {
             const std::string & text = test_strings[i];
             auto result = benchmark_string(stl_regex_ptr, stl_compile_error,
                                             pcre2_regex_ptr, pcre2_match_data_ptr,
+                                            pcre2_compile_result.jit_available,
                                             pcre2_compile_error, text);
             results.push_back(result);
 
