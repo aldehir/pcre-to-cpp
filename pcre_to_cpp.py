@@ -1642,7 +1642,7 @@ class CppEmitter:
         # Collect positions for this quantifier using shared stack
         self._emit_block(
             """
-            // Quantifier $quant_num: $quant_pattern")
+            // Quantifier $quant_num: $quant_pattern
             size_t $base_name = _stack_mark();
             _stack_push(match_pos);
         """,
