@@ -1007,90 +1007,132 @@ class CppEmitter:
 
     def _generate_charclass_match(self, node: CharClass, case_insensitive: bool = False):
         """Generate match for character class."""
-        var = self._temp_var("cpt")
-        flags_var = f"flags_{var}"
-
-        # Generate pattern comment for this character class
-        class_pattern = self._ast_to_pattern(node)
+        needs_cpt, needs_flags, cond = self._charclass_condition_inline(node, case_insensitive)
+        pattern = self._ast_to_pattern(node)
         ci_suffix = " (case-insensitive)" if case_insensitive else ""
-        self._emit(f"// Character class: {class_pattern}{ci_suffix}")
 
-        with self._block("if (matched) {"):
-            self._emit(f"uint32_t {var} = _get_cpt(match_pos);")
-            self._emit(f"auto {flags_var} = _get_flags(match_pos);")
+        # Emit multi-line lambda for readability
+        self._emit(f"// {pattern}{ci_suffix}")
+        self._emit("_try_match(match_pos, matched, [&]{")
+        with self._indent_block():
+            if needs_cpt:
+                self._emit("uint32_t c = _get_cpt(match_pos);")
+            if needs_flags:
+                self._emit("auto f = _get_flags(match_pos);")
+            self._emit(f"return {cond};")
+        self._emit("});")
 
-            # Build conditions with their pattern representations
-            conditions = []
-            cond_comments = []
-            for item in node.items:
-                if isinstance(item, tuple):
-                    start, end = item
-                    if case_insensitive and start.isalpha() and end.isalpha():
-                        # Case-insensitive range - compare lowercased
-                        conditions.append(f"(unicode_tolower({var}) >= {ord(start.lower())} && unicode_tolower({var}) <= {ord(end.lower())})")
-                    else:
-                        conditions.append(f"({var} >= {ord(start)} && {var} <= {ord(end)})")
-                    cond_comments.append(f"{self._escape_char(start)}-{self._escape_char(end)}")
-                elif isinstance(item, LiteralChar):
-                    if case_insensitive and item.char.isalpha():
-                        # Case-insensitive literal - compare lowercased
-                        conditions.append(f"(unicode_tolower({var}) == {ord(item.char.lower())})")
-                    else:
-                        conditions.append(f"({var} == {ord(item.char)})")
-                    cond_comments.append(self._escape_char(item.char))
-                elif isinstance(item, SpecialChar):
-                    conditions.append(f"({var} == {ord(item.char)})")
-                    cond_comments.append(self._escape_char(item.char))
-                elif isinstance(item, UnicodeCategory):
-                    cond = self._unicode_cat_condition(item, var, flags_var)
-                    conditions.append(f"({cond})")
-                    p = "P" if item.negated else "p"
-                    cond_comments.append(f"\\{p}{{{item.category}}}")
-                elif isinstance(item, Predefined):
-                    cond = self._predefined_condition(item, var, flags_var)
-                    conditions.append(f"({cond})")
-                    cond_comments.append(f"\\{item.name}")
-                elif isinstance(item, str):
-                    if case_insensitive and item.isalpha():
-                        conditions.append(f"(unicode_tolower({var}) == {ord(item.lower())})")
-                    else:
-                        conditions.append(f"({var} == {ord(item)})")
-                    cond_comments.append(self._escape_char(item))
+    def _charclass_condition_inline(self, node: CharClass, case_insensitive: bool = False) -> tuple:
+        """Generate inline condition for character class.
 
-            if conditions:
-                # Generate multi-line condition with comments
-                if node.negated:
-                    self._emit(f"// Match if NOT any of: {' | '.join(cond_comments)}")
-                    self._emit(f"bool in_class = {conditions[0]}")
-                    for cond, comment in zip(conditions[1:], cond_comments[1:]):
-                        self._emit(f"    || {cond}")
-                    self._emit(";")
-                    self._emit_block('''
-                        if (!in_class && $var != OUT_OF_RANGE) {
-                            match_pos++;
-                        } else { matched = false; }
-                    ''', locals())
+        Returns:
+            Tuple of (needs_cpt, needs_flags, condition_string)
+        """
+        needs_cpt = False
+        needs_flags = False
+        conditions = []
+
+        for item in node.items:
+            if isinstance(item, tuple):
+                # Range like ('a', 'z')
+                start, end = item
+                needs_cpt = True
+                if case_insensitive and start.isalpha() and end.isalpha():
+                    conditions.append(f"(unicode_tolower(c) >= {ord(start.lower())} && unicode_tolower(c) <= {ord(end.lower())})")
                 else:
-                    self._emit(f"// Match if any of: {' | '.join(cond_comments)}")
-                    if len(conditions) == 1:
-                        cond_str = conditions[0]
-                        self._emit_block('''
-                            if ($cond_str) {
-                                match_pos++;
-                            } else { matched = false; }
-                        ''', locals())
-                    else:
-                        self._emit(f"if ({conditions[0]}")
-                        for cond in conditions[1:]:
-                            self._emit(f"    || {cond}")
-                        with self._block(") {", "}"):
-                            self._emit("match_pos++;")
-                        self._emit("else { matched = false; }")
+                    conditions.append(f"(c >= {ord(start)} && c <= {ord(end)})")
+            elif isinstance(item, LiteralChar):
+                needs_cpt = True
+                if case_insensitive and item.char.isalpha():
+                    conditions.append(f"unicode_tolower(c) == {ord(item.char.lower())}")
+                else:
+                    conditions.append(f"c == {ord(item.char)}")
+            elif isinstance(item, SpecialChar):
+                needs_cpt = True
+                conditions.append(f"c == {ord(item.char)}")
+            elif isinstance(item, UnicodeCategory):
+                needs_flags = True
+                if item.category == "Han":
+                    needs_cpt = True
+                    cond = "unicode_cpt_is_han(c)" if not item.negated else "!unicode_cpt_is_han(c)"
+                else:
+                    cond = self._unicode_cat_flags_condition(item)
+                conditions.append(cond)
+                self.required_helpers.add(item.category)
+            elif isinstance(item, Predefined):
+                needs_flags = True
+                needs_cpt = True  # Some predefined classes use cpt (e.g., \w checks for '_')
+                cond = self._predefined_flags_condition(item)
+                conditions.append(cond)
+            elif isinstance(item, str):
+                needs_cpt = True
+                if case_insensitive and item.isalpha():
+                    conditions.append(f"unicode_tolower(c) == {ord(item.lower())}")
+                else:
+                    conditions.append(f"c == {ord(item)}")
+
+        if not conditions:
+            # Empty character class
+            if node.negated:
+                needs_cpt = True
+                return (needs_cpt, needs_flags, "c != OUT_OF_RANGE")
             else:
-                if node.negated:
-                    self._emit(f"if ({var} != OUT_OF_RANGE) {{ match_pos++; }} else {{ matched = false; }}")
-                else:
-                    self._emit("matched = false;")
+                return (False, False, "false")
+
+        # Join conditions with ||
+        combined = " || ".join(conditions)
+
+        if node.negated:
+            needs_cpt = True  # Need to check OUT_OF_RANGE
+            return (needs_cpt, needs_flags, f"c != OUT_OF_RANGE && !({combined})")
+        else:
+            return (needs_cpt, needs_flags, combined)
+
+    def _unicode_cat_flags_condition(self, node: UnicodeCategory) -> str:
+        """Generate flags-based condition for Unicode category (uses 'f' variable)."""
+        cat = node.category
+        cat_map = {
+            "L": "f.is_letter",
+            "N": "f.is_number",
+            "P": "f.is_punctuation",
+            "S": "f.is_symbol",
+            "M": "f.is_accent_mark",
+            "Z": "f.is_separator",
+            "C": "f.is_control",
+            "Lu": "(f.is_letter && f.is_uppercase)",
+            "Ll": "(f.is_letter && f.is_lowercase)",
+            "Lt": "(f.is_letter && f.is_uppercase)",
+            "Lm": "(f.is_letter && !f.is_uppercase && !f.is_lowercase)",
+            "Lo": "(f.is_letter && !f.is_uppercase && !f.is_lowercase)",
+            "Nd": "f.is_number",
+            "Nl": "f.is_number",
+            "No": "f.is_number",
+            "Mn": "f.is_accent_mark",
+            "Mc": "f.is_accent_mark",
+            "Me": "f.is_accent_mark",
+        }
+
+        if cat in cat_map:
+            cond = cat_map[cat]
+        else:
+            cond = f"unicode_cpt_is_{cat.lower()}(c)"
+
+        if node.negated:
+            return f"!({cond})"
+        return cond
+
+    def _predefined_flags_condition(self, node: Predefined) -> str:
+        """Generate flags-based condition for predefined class (uses 'c' and 'f' variables)."""
+        name = node.name
+        conditions = {
+            "s": "f.is_whitespace",
+            "S": "(!f.is_whitespace && f.as_uint())",
+            "d": "f.is_number",
+            "D": "(!f.is_number && f.as_uint())",
+            "w": "(f.is_letter || f.is_number || c == '_')",
+            "W": "(!(f.is_letter || f.is_number || c == '_') && f.as_uint())",
+        }
+        return conditions.get(name, "false")
 
     def _generate_unicode_cat_match(self, node: UnicodeCategory):
         """Generate match for Unicode category."""
