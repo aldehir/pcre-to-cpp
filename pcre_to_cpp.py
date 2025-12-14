@@ -758,8 +758,7 @@ class CppEmitter:
             """)
 
         # Helpful macros
-        self.emit(
-            """
+        self.emit("""
 
             // Macro for match attempts
             #define TRY_MATCH(cond) do {\\
@@ -959,16 +958,12 @@ class CppEmitter:
                 f"TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == {char_lower}); // {char_desc} (case-insensitive)"
             )
         else:
-            self.emit(
-                f"TRY_MATCH(_get_cpt(match_pos) == {char_code}); // {char_desc}"
-            )
+            self.emit(f"TRY_MATCH(_get_cpt(match_pos) == {char_code}); // {char_desc}")
 
     def _generate_special_match(self, node: SpecialChar):
         char_code = ord(node.char)
         char_desc = self._char_description(node.char)
-        self.emit(
-            f"TRY_MATCH(get_cpt(match_pos) == {char_code}); // {char_desc}"
-        )
+        self.emit(f"TRY_MATCH(get_cpt(match_pos) == {char_code}); // {char_desc}")
 
     def _generate_charclass_match(
         self, node: CharClass, case_insensitive: bool = False
@@ -1114,9 +1109,7 @@ class CppEmitter:
     def _generate_unicode_cat_match(self, node: UnicodeCategory):
         """Generate match for Unicode category."""
         cond = self._unicode_cat_condition_inline(node)
-        self.emit(
-            f"TRY_MATCH({cond}); // {node.fragment}"
-        )
+        self.emit(f"TRY_MATCH({cond}); // {node.fragment}")
 
     def _unicode_cat_condition_inline(self, node: UnicodeCategory) -> str:
         """Generate inline condition for Unicode category using match_pos."""
@@ -1157,9 +1150,7 @@ class CppEmitter:
     def _generate_predefined_match(self, node: Predefined):
         """Generate match for predefined class."""
         cond = self._predefined_condition_inline(node)
-        self.emit(
-            f"TRY_MATCH({cond}); // \\{node.name}"
-        )
+        self.emit(f"TRY_MATCH({cond}); // \\{node.name}")
 
     def _predefined_condition_inline(self, node: Predefined) -> str:
         """Generate inline condition for predefined class using match_pos."""
@@ -1178,9 +1169,7 @@ class CppEmitter:
 
     def _generate_any_match(self):
         """Generate match for any character."""
-        self.emit(
-            "TRY_MATCH(_get_cpt(match_pos) != OUT_OF_RANGE); // ."
-        )
+        self.emit("TRY_MATCH(_get_cpt(match_pos) != OUT_OF_RANGE); // .")
 
     def _generate_quantifier_match(
         self, node: Quantifier, case_insensitive: bool = False
