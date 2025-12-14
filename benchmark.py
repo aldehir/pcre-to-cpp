@@ -77,7 +77,7 @@ def build_cpp(name: str) -> bool:
 
     # Configure (build dir is 3 levels deep: builds/benchmarks/{name}/)
     result = subprocess.run(
-        ["cmake", f"-DPATTERN_FILE={pattern_file}", "../../.."],
+        ["cmake", f"-DPATTERN_FILE={pattern_file}", "-DCMAKE_BUILD_TYPE=Release", "../../.."],
         cwd=build_dir,
         capture_output=True,
         text=True
@@ -88,7 +88,7 @@ def build_cpp(name: str) -> bool:
 
     # Build
     result = subprocess.run(
-        ["cmake", "--build", "."],
+        ["cmake", "--build", ".", "--config", "Release"],
         cwd=build_dir,
         capture_output=True,
         text=True
