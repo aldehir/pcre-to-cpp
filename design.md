@@ -10,9 +10,8 @@ Converts PCRE patterns into standalone C++ functions for LLM pretokenization. Ge
 flowchart TD
     A["PCRE Pattern"] --> B["Recursive Descent Parser"]
     B --> C["AST"]
-    C --> D["AST Optimizer"]
-    D --> E["C++ Emitter"]
-    E --> F["C++ Function"]
+    C --> D["C++ Emitter"]
+    D --> E["C++ Function"]
 ```
 
 ## Parser
@@ -54,14 +53,6 @@ GroupNode(child, flags)     # (...), (?:...), (?i:...)
 Lookahead(child, positive)  # (?=...), (?!...)
 Anchor(type)                # ^, $
 ```
-
-## AST Optimizer
-
-Runs transformations until fixed point:
-
-1. **Sequence flattening**: `Seq([Seq([a, b]), c])` → `Seq([a, b, c])`
-2. **Alternation to CharClass**: `a|b|c` → `[abc]`
-3. **Common prefix extraction**: `abc|abd` → `ab(c|d)`
 
 ## Supported PCRE Features
 

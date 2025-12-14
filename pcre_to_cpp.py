@@ -24,6 +24,7 @@ class LiteralChar:
     """A literal character to match."""
 
     char: str
+    fragment: str = ""
 
     def __repr__(self):
         return f"Literal({self.char!r})"
@@ -35,6 +36,7 @@ class CharClass:
 
     items: list  # List of chars, (start, end) tuples, or nested nodes
     negated: bool = False
+    fragment: str = ""
 
     def __repr__(self):
         neg = "^" if self.negated else ""
@@ -47,6 +49,7 @@ class UnicodeCategory:
 
     category: str  # "L", "N", "P", "S", "M", "Han", etc.
     negated: bool = False
+    fragment: str = ""
 
     def __repr__(self):
         p = "P" if self.negated else "p"
@@ -58,6 +61,7 @@ class Predefined:
     """Predefined character class like \\s, \\d, \\w."""
 
     name: str  # "s", "S", "d", "D", "w", "W"
+    fragment: str = ""
 
     def __repr__(self):
         return f"\\{self.name}"
@@ -68,6 +72,7 @@ class SpecialChar:
     """Special character like \\r, \\n, \\t."""
 
     char: str  # The actual character value
+    fragment: str = ""
 
     def __repr__(self):
         return f"Special({self.char!r})"
@@ -77,7 +82,7 @@ class SpecialChar:
 class AnyChar:
     """Matches any character (.)"""
 
-    pass
+    fragment: str = ""
 
 
 @dataclass
@@ -89,6 +94,7 @@ class Quantifier:
     max_count: int  # -1 means unlimited
     greedy: bool = True
     possessive: bool = False  # If True, never backtrack
+    fragment: str = ""
 
     def __repr__(self):
         if self.min_count == 0 and self.max_count == 1:
@@ -116,6 +122,7 @@ class Alternation:
     """Alternation of patterns (a|b|c)."""
 
     alternatives: list
+    fragment: str = ""
 
     def __repr__(self):
         return f"Alt({self.alternatives})"
@@ -126,6 +133,7 @@ class Sequence:
     """Sequence of patterns (abc)."""
 
     children: list
+    fragment: str = ""
 
     def __repr__(self):
         return f"Seq({self.children})"
@@ -138,6 +146,7 @@ class GroupNode:
     child: "Node"
     capturing: bool = False
     case_insensitive: bool = False
+    fragment: str = ""
 
     def __repr__(self):
         flags = []
@@ -154,6 +163,7 @@ class Lookahead:
 
     child: "Node"
     positive: bool  # True = (?=...), False = (?!...)
+    fragment: str = ""
 
     def __repr__(self):
         op = "=" if self.positive else "!"
@@ -165,6 +175,7 @@ class Anchor:
     """Anchor like ^ or $."""
 
     type: str  # "start", "end"
+    fragment: str = ""
 
     def __repr__(self):
         return f"Anchor({self.type})"
@@ -185,227 +196,6 @@ Node = Union[
     Lookahead,
     Anchor,
 ]
-
-
-def nodes_equal(a: Node, b: Node) -> bool:
-    """Deep equality check for AST nodes."""
-    if isinstance(a, LiteralChar) and isinstance(b, LiteralChar):
-        return a.char == b.char
-    if isinstance(a, SpecialChar) and isinstance(b, SpecialChar):
-        return a.char == b.char
-    if isinstance(a, Predefined) and isinstance(b, Predefined):
-        return a.name == b.name
-    if isinstance(a, UnicodeCategory) and isinstance(b, UnicodeCategory):
-        return a.category == b.category and a.negated == b.negated
-    if isinstance(a, AnyChar) and isinstance(b, AnyChar):
-        return True
-    if isinstance(a, Anchor) and isinstance(b, Anchor):
-        return a.type == b.type
-    if isinstance(a, CharClass) and isinstance(b, CharClass):
-        if a.negated != b.negated or len(a.items) != len(b.items):
-            return False
-        for x, y in zip(a.items, b.items):
-            # Items can be tuples (ranges) or nodes
-            if isinstance(x, tuple) and isinstance(y, tuple):
-                if x != y:
-                    return False
-            elif isinstance(x, tuple) or isinstance(y, tuple):
-                return False
-            elif not nodes_equal(x, y):
-                return False
-        return True
-    if isinstance(a, Quantifier) and isinstance(b, Quantifier):
-        return (
-            a.min_count == b.min_count
-            and a.max_count == b.max_count
-            and a.greedy == b.greedy
-            and a.possessive == b.possessive
-            and nodes_equal(a.child, b.child)
-        )
-    if isinstance(a, Sequence) and isinstance(b, Sequence):
-        if len(a.children) != len(b.children):
-            return False
-        return all(nodes_equal(x, y) for x, y in zip(a.children, b.children))
-    if isinstance(a, Alternation) and isinstance(b, Alternation):
-        if len(a.alternatives) != len(b.alternatives):
-            return False
-        return all(nodes_equal(x, y) for x, y in zip(a.alternatives, b.alternatives))
-    if isinstance(a, GroupNode) and isinstance(b, GroupNode):
-        return (
-            a.capturing == b.capturing
-            and a.case_insensitive == b.case_insensitive
-            and nodes_equal(a.child, b.child)
-        )
-    if isinstance(a, Lookahead) and isinstance(b, Lookahead):
-        return a.positive == b.positive and nodes_equal(a.child, b.child)
-    return False
-
-
-# =============================================================================
-# AST Optimizer
-# =============================================================================
-
-
-class ASTOptimizer:
-    """Optimizes regex AST before code generation."""
-
-    def __init__(self, ast: Node):
-        self.ast = ast
-
-    def optimize(self) -> Node:
-        """Apply all optimizations (run until fixed point)."""
-        prev = None
-        current = self.ast
-        # Run until no changes (fixed point)
-        while not self._ast_equal(prev, current):
-            prev = current
-            current = self._transform(current)
-        return current
-
-    def _ast_equal(self, a: Optional[Node], b: Optional[Node]) -> bool:
-        """Check if two ASTs are equal (handles None)."""
-        if a is None or b is None:
-            return a is b
-        return nodes_equal(a, b)
-
-    def _transform(self, node: Node) -> Node:
-        """Recursively transform a node and its children."""
-        # First transform children
-        node = self._transform_children(node)
-        # Then apply optimizations to this node
-        node = self._flatten_sequence(node)
-        node = self._alternation_to_charclass(node)
-        node = self._extract_common_prefix(node)
-        return node
-
-    def _transform_children(self, node: Node) -> Node:
-        """Recursively transform children of a node."""
-        if isinstance(
-            node,
-            (LiteralChar, SpecialChar, Predefined, UnicodeCategory, AnyChar, Anchor),
-        ):
-            return node  # Leaf nodes
-
-        if isinstance(node, CharClass):
-            # Transform items that are nodes (not tuples for ranges)
-            new_items = []
-            for item in node.items:
-                if isinstance(item, tuple):
-                    new_items.append(item)
-                else:
-                    new_items.append(self._transform(item))
-            return CharClass(new_items, node.negated)
-
-        if isinstance(node, Quantifier):
-            return Quantifier(
-                self._transform(node.child),
-                node.min_count,
-                node.max_count,
-                node.greedy,
-                node.possessive,
-            )
-
-        if isinstance(node, Sequence):
-            return Sequence([self._transform(c) for c in node.children])
-
-        if isinstance(node, Alternation):
-            return Alternation([self._transform(a) for a in node.alternatives])
-
-        if isinstance(node, GroupNode):
-            return GroupNode(
-                self._transform(node.child), node.capturing, node.case_insensitive
-            )
-
-        if isinstance(node, Lookahead):
-            return Lookahead(self._transform(node.child), node.positive)
-
-        return node
-
-    def _flatten_sequence(self, node: Node) -> Node:
-        """Flatten nested sequences and unwrap trivial groups."""
-        if isinstance(node, Sequence):
-            flattened = []
-            for child in node.children:
-                if isinstance(child, Sequence):
-                    flattened.extend(child.children)
-                else:
-                    flattened.append(child)
-            if len(flattened) == 0:
-                return Sequence([])
-            if len(flattened) == 1:
-                return flattened[0]
-            return Sequence(flattened)
-
-        # Unwrap non-capturing, non-case-insensitive groups
-        if isinstance(node, GroupNode):
-            if not node.capturing and not node.case_insensitive:
-                return node.child
-
-        return node
-
-    def _is_single_char(self, node: Node) -> bool:
-        """Check if node matches exactly one character."""
-        return isinstance(node, (LiteralChar, SpecialChar, Predefined, UnicodeCategory))
-
-    def _alternation_to_charclass(self, node: Node) -> Node:
-        """Convert alternation of single chars to CharClass."""
-        if not isinstance(node, Alternation):
-            return node
-
-        # Check if ALL alternatives are single-char items
-        if not all(self._is_single_char(alt) for alt in node.alternatives):
-            return node
-
-        return CharClass(items=list(node.alternatives), negated=False)
-
-    def _to_sequence(self, node: Node) -> Sequence:
-        """Wrap non-sequence nodes in a Sequence."""
-        if isinstance(node, Sequence):
-            return node
-        return Sequence([node])
-
-    def _extract_common_prefix(self, node: Node) -> Node:
-        """Extract common prefix from alternation."""
-        if not isinstance(node, Alternation):
-            return node
-
-        if len(node.alternatives) < 2:
-            return node
-
-        # Convert all alternatives to sequences
-        seqs = [self._to_sequence(alt) for alt in node.alternatives]
-
-        # Find common prefix length
-        prefix_len = 0
-        while True:
-            # Check if all sequences have enough elements
-            if not all(len(s.children) > prefix_len for s in seqs):
-                break
-            # Check if all elements at this position are equal
-            first = seqs[0].children[prefix_len]
-            if not all(nodes_equal(s.children[prefix_len], first) for s in seqs[1:]):
-                break
-            prefix_len += 1
-
-        if prefix_len == 0:
-            return node
-
-        # Build: prefix + Alternation(suffixes)
-        prefix = list(seqs[0].children[:prefix_len])
-        suffixes = []
-        for s in seqs:
-            remaining = s.children[prefix_len:]
-            if len(remaining) == 0:
-                suffixes.append(Sequence([]))  # Empty match
-            elif len(remaining) == 1:
-                suffixes.append(remaining[0])
-            else:
-                suffixes.append(Sequence(list(remaining)))
-
-        result_children = prefix + [Alternation(suffixes)]
-        if len(result_children) == 1:
-            return result_children[0]
-        return Sequence(result_children)
 
 
 # =============================================================================
@@ -464,6 +254,7 @@ class PCREParser:
 
     def _parse_alternation(self) -> Node:
         """Parse alternation: sequence ('|' sequence)*"""
+        start_pos = self.pos
         alternatives = [self._parse_sequence()]
 
         while self._peek() == "|":
@@ -472,10 +263,13 @@ class PCREParser:
 
         if len(alternatives) == 1:
             return alternatives[0]
-        return Alternation(alternatives)
+        result = Alternation(alternatives)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_sequence(self) -> Node:
         """Parse sequence: term+"""
+        start_pos = self.pos
         terms = []
 
         while self.pos < self.length:
@@ -492,10 +286,13 @@ class PCREParser:
             raise ValueError(f"Empty sequence at position {self.pos}")
         if len(terms) == 1:
             return terms[0]
-        return Sequence(terms)
+        result = Sequence(terms)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_term(self) -> Optional[Node]:
         """Parse term: atom quantifier?"""
+        start_pos = self.pos
         atom = self._parse_atom()
         if atom is None:
             return None
@@ -504,7 +301,9 @@ class PCREParser:
         quantifier = self._parse_quantifier()
         if quantifier:
             min_c, max_c, greedy, possessive = quantifier
-            return Quantifier(atom, min_c, max_c, greedy, possessive)
+            result = Quantifier(atom, min_c, max_c, greedy, possessive)
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         return atom
 
@@ -529,16 +328,25 @@ class PCREParser:
 
         # Any character
         if ch == ".":
+            start_pos = self.pos
             self._advance()
-            return AnyChar()
+            result = AnyChar()
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Anchors
         if ch == "^":
+            start_pos = self.pos
             self._advance()
-            return Anchor("start")
+            result = Anchor("start")
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
         if ch == "$":
+            start_pos = self.pos
             self._advance()
-            return Anchor("end")
+            result = Anchor("end")
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Special characters that end atoms
         if ch in "|)":
@@ -549,11 +357,15 @@ class PCREParser:
             return None
 
         # Literal character
+        start_pos = self.pos
         self._advance()
-        return LiteralChar(ch)
+        result = LiteralChar(ch)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_escape(self) -> Node:
         """Parse escape sequence."""
+        start_pos = self.pos
         self._expect("\\")
         ch = self._peek()
 
@@ -573,18 +385,24 @@ class PCREParser:
             category = self.pattern[cat_start : self.pos]
             self._expect("}")
 
-            return UnicodeCategory(category, negated)
+            result = UnicodeCategory(category, negated)
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Predefined classes
         if ch in "sSwWdD":
             self._advance()
-            return Predefined(ch)
+            result = Predefined(ch)
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Special escapes
         escape_map = {"r": "\r", "n": "\n", "t": "\t"}
         if ch in escape_map:
             self._advance()
-            return SpecialChar(escape_map[ch])
+            result = SpecialChar(escape_map[ch])
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Hex escape: \xNN
         if ch == "x":
@@ -593,14 +411,19 @@ class PCREParser:
             if len(hex_digits) != 2:
                 raise ValueError(f"Invalid hex escape at position {self.pos}")
             self._advance(2)
-            return LiteralChar(chr(int(hex_digits, 16)))
+            result = LiteralChar(chr(int(hex_digits, 16)))
+            result.fragment = self.pattern[start_pos : self.pos]
+            return result
 
         # Escaped literal (special chars)
         self._advance()
-        return LiteralChar(ch)
+        result = LiteralChar(ch)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_charclass(self) -> CharClass:
         """Parse character class: [...]"""
+        start_pos = self.pos
         self._expect("[")
 
         negated = False
@@ -627,13 +450,15 @@ class PCREParser:
                 else:
                     # Can't make a range, add separately
                     items.append(item)
-                    items.append(LiteralChar("-"))
+                    items.append(LiteralChar("-", fragment="-"))
                     items.append(end_item)
             else:
                 items.append(item)
 
         self._expect("]")
-        return CharClass(items, negated)
+        result = CharClass(items, negated)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_cc_item(self) -> Node:
         """Parse a single item in a character class."""
@@ -642,8 +467,11 @@ class PCREParser:
         if ch == "\\":
             return self._parse_escape()
 
+        start_pos = self.pos
         self._advance()
-        return LiteralChar(ch)
+        result = LiteralChar(ch)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _cc_item_char(self, item: Node) -> Optional[str]:
         """Extract character from char class item, if possible."""
@@ -655,6 +483,7 @@ class PCREParser:
 
     def _parse_group(self) -> Node:
         """Parse group: (...) with various modifiers."""
+        start_pos = self.pos
         self._expect("(")
 
         # Check for special group types
@@ -667,7 +496,9 @@ class PCREParser:
                 self._advance()
                 child = self._parse_alternation()
                 self._expect(")")
-                return GroupNode(child, capturing=False)
+                result = GroupNode(child, capturing=False)
+                result.fragment = self.pattern[start_pos : self.pos]
+                return result
 
             elif modifier == "i":
                 # Case-insensitive: (?i:...)
@@ -675,21 +506,27 @@ class PCREParser:
                 self._expect(":")
                 child = self._parse_alternation()
                 self._expect(")")
-                return GroupNode(child, capturing=False, case_insensitive=True)
+                result = GroupNode(child, capturing=False, case_insensitive=True)
+                result.fragment = self.pattern[start_pos : self.pos]
+                return result
 
             elif modifier == "=":
                 # Positive lookahead: (?=...)
                 self._advance()
                 child = self._parse_alternation()
                 self._expect(")")
-                return Lookahead(child, positive=True)
+                result = Lookahead(child, positive=True)
+                result.fragment = self.pattern[start_pos : self.pos]
+                return result
 
             elif modifier == "!":
                 # Negative lookahead: (?!...)
                 self._advance()
                 child = self._parse_alternation()
                 self._expect(")")
-                return Lookahead(child, positive=False)
+                result = Lookahead(child, positive=False)
+                result.fragment = self.pattern[start_pos : self.pos]
+                return result
 
             elif modifier == "<":
                 # Lookbehind - not supported
@@ -703,7 +540,9 @@ class PCREParser:
         # Capturing group
         child = self._parse_alternation()
         self._expect(")")
-        return GroupNode(child, capturing=True)
+        result = GroupNode(child, capturing=True)
+        result.fragment = self.pattern[start_pos : self.pos]
+        return result
 
     def _parse_quantifier(self) -> Optional[Tuple[int, int, bool, bool]]:
         """Parse quantifier: *, +, ?, {n}, {n,}, {n,m} with optional lazy (?) or possessive (+)"""
@@ -781,11 +620,6 @@ def parse_pcre(pattern: str) -> Node:
     """Parse a PCRE pattern into an AST."""
     parser = PCREParser(pattern)
     return parser.parse()
-
-
-def optimize(ast: Node) -> Node:
-    """Optimize an AST for code generation."""
-    return ASTOptimizer(ast).optimize()
 
 
 def generate_cpp(ast: Node, name: str, pattern: str = "") -> str:
@@ -1027,9 +861,8 @@ class CppEmitter:
 
     def _generate_alternative(self, ast: Node, is_first: bool):
         """Generate code for a single alternative."""
-        pattern = self._ast_to_pattern(ast)
         self._emit("")
-        self._emit(f"// Alternative: {pattern}")
+        self._emit(f"// Alternative: {ast.fragment}")
 
         with self._block():
             self._emit_block("""\
@@ -1112,11 +945,10 @@ class CppEmitter:
         needs_cpt, needs_flags, cond = self._charclass_condition_inline(
             node, case_insensitive
         )
-        pattern = self._ast_to_pattern(node)
         ci_suffix = " (case-insensitive)" if case_insensitive else ""
 
         # Emit multi-line lambda for readability
-        self._emit(f"// {pattern}{ci_suffix}")
+        self._emit(f"// {node.fragment}{ci_suffix}")
         self._emit("_try_match(match_pos, matched, [&]{")
         with self._indent_block():
             if needs_cpt:
@@ -1250,9 +1082,8 @@ class CppEmitter:
     def _generate_unicode_cat_match(self, node: UnicodeCategory):
         """Generate match for Unicode category."""
         cond = self._unicode_cat_condition_inline(node)
-        pattern = self._ast_to_pattern(node)
         self._emit(
-            f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // {pattern}"
+            f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // {node.fragment}"
         )
 
     def _unicode_cat_condition_inline(self, node: UnicodeCategory) -> str:
@@ -1580,7 +1411,7 @@ class CppEmitter:
                 self._generate_node_match(child, case_insensitive)
             return
 
-        pattern_str = "".join(self._ast_to_pattern(c) for c in children[:5])
+        pattern_str = "".join(c.fragment for c in children[:5])
         if len(children) > 5:
             pattern_str += "..."
 
@@ -1637,7 +1468,6 @@ class CppEmitter:
         greedy = quant.greedy
         base_name = f"q{quant_num}_base"
         count_name = f"q{quant_num}_count"
-        quant_pattern = self._ast_to_pattern(quant)
 
         # Collect positions for this quantifier using shared stack
         self._emit_block(
@@ -1647,7 +1477,7 @@ class CppEmitter:
             _stack_push(match_pos);
         """,
             quant_num=quant_num,
-            quant_pattern=quant_pattern,
+            quant_pattern=quant.fragment,
             base_name=base_name,
         )
 
@@ -1788,104 +1618,6 @@ class CppEmitter:
         escaped = self._escape_char(c)
         return f"U+{code:04X} '{escaped}'"
 
-    def _charclass_items_to_pattern(self, items: list) -> str:
-        """Convert character class items to pattern string."""
-        parts = []
-        for item in items:
-            if isinstance(item, tuple):
-                # Range like ('a', 'z')
-                start, end = item
-                parts.append(f"{self._escape_char(start)}-{self._escape_char(end)}")
-            elif isinstance(item, LiteralChar):
-                c = item.char
-                if c in "\\[]^-":
-                    parts.append(f"\\{c}")
-                else:
-                    parts.append(self._escape_char(c))
-            elif isinstance(item, SpecialChar):
-                parts.append(self._escape_char(item.char))
-            elif isinstance(item, UnicodeCategory):
-                p = "P" if item.negated else "p"
-                parts.append(f"\\{p}{{{item.category}}}")
-            elif isinstance(item, Predefined):
-                parts.append(f"\\{item.name}")
-            elif isinstance(item, str):
-                if item in "\\[]^-":
-                    parts.append(f"\\{item}")
-                else:
-                    parts.append(self._escape_char(item))
-        return "".join(parts)
-
-    def _ast_to_pattern(self, ast: Node, depth: int = 0) -> str:
-        """Convert AST back to a pattern string for comments."""
-        if depth > 5:
-            return "..."
-
-        if isinstance(ast, LiteralChar):
-            if ast.char in "\\[]{}()*+?|^$.":
-                return f"\\{ast.char}"
-            return ast.char
-        elif isinstance(ast, CharClass):
-            neg = "^" if ast.negated else ""
-            items_str = self._charclass_items_to_pattern(ast.items)
-            return f"[{neg}{items_str}]"
-        elif isinstance(ast, UnicodeCategory):
-            p = "P" if ast.negated else "p"
-            return f"\\{p}{{{ast.category}}}"
-        elif isinstance(ast, Predefined):
-            return f"\\{ast.name}"
-        elif isinstance(ast, SpecialChar):
-            return {"\r": "\\r", "\n": "\\n", "\t": "\\t"}.get(ast.char, repr(ast.char))
-        elif isinstance(ast, AnyChar):
-            return "."
-        elif isinstance(ast, Quantifier):
-            child = self._ast_to_pattern(ast.child, depth + 1)
-            # Build base quantifier
-            if ast.min_count == 0 and ast.max_count == 1:
-                q = "?"
-            elif ast.min_count == 0 and ast.max_count == -1:
-                q = "*"
-            elif ast.min_count == 1 and ast.max_count == -1:
-                q = "+"
-            elif ast.min_count == ast.max_count:
-                q = f"{{{ast.min_count}}}"
-            elif ast.max_count == -1:
-                q = f"{{{ast.min_count},}}"
-            else:
-                q = f"{{{ast.min_count},{ast.max_count}}}"
-            # Add lazy or possessive suffix
-            if ast.possessive:
-                q += "+"
-            elif not ast.greedy:
-                q += "?"
-            return f"{child}{q}"
-        elif isinstance(ast, Alternation):
-            alts = [self._ast_to_pattern(a, depth + 1) for a in ast.alternatives]
-            alt_str = "|".join(alts)
-            # Wrap in parentheses if nested (not at top level)
-            if depth > 0:
-                return f"({alt_str})"
-            return alt_str
-        elif isinstance(ast, Sequence):
-            parts = [self._ast_to_pattern(c, depth + 1) for c in ast.children]
-            return "".join(parts)
-        elif isinstance(ast, GroupNode):
-            child = self._ast_to_pattern(ast.child, depth + 1)
-            if ast.case_insensitive:
-                return f"(?i:{child})"
-            elif not ast.capturing:
-                return f"(?:{child})"
-            else:
-                return f"({child})"
-        elif isinstance(ast, Lookahead):
-            child = self._ast_to_pattern(ast.child, depth + 1)
-            op = "=" if ast.positive else "!"
-            return f"(?{op}{child})"
-        elif isinstance(ast, Anchor):
-            return "^" if ast.type == "start" else "$"
-        else:
-            return str(ast)
-
 
 # =============================================================================
 # Main
@@ -1913,9 +1645,6 @@ def main():
     except ValueError as e:
         print(f"Error parsing pattern: {e}", file=sys.stderr)
         sys.exit(1)
-
-    # Optimize the AST
-    ast = optimize(ast)
 
     # Generate C++ code
     cpp_code = generate_cpp(ast, args.name, args.pattern)
