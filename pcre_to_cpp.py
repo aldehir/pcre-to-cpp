@@ -740,7 +740,6 @@ class CppEmitter:
         self.function_name = function_name
         self.indent_level = 0
         self.lines = []
-        self.temp_counter = 0
         self.required_helpers = set()
         self.uses_backtracking = False  # Set by _ast_needs_backtracking()
 
@@ -783,10 +782,6 @@ class CppEmitter:
             yield
         finally:
             self.indent_level -= 1
-
-    def _temp_var(self, prefix: str = "tmp") -> str:
-        self.temp_counter += 1
-        return f"{prefix}_{self.temp_counter}"
 
     def generate(self, ast: Node, pattern: str = None) -> str:
         """Generate C++ code for the given AST.
@@ -1179,77 +1174,6 @@ class CppEmitter:
             return f"!({cond})"
         return cond
 
-    def _unicode_cat_condition(self, node: UnicodeCategory, cpt_var: str, flags_var: str) -> str:
-        """Generate condition for Unicode category.
-
-        Unicode General Categories:
-        - L  = Letter (Lu | Ll | Lt | Lm | Lo)
-        - Lu = Uppercase Letter
-        - Ll = Lowercase Letter
-        - Lt = Titlecase Letter (rare, e.g., Dž)
-        - Lm = Modifier Letter (e.g., ʰ ʱ)
-        - Lo = Other Letter (e.g., Chinese, Hebrew, Arabic)
-        - M  = Mark (Mn | Mc | Me) - combining marks/accents
-        - N  = Number (Nd | Nl | No)
-        - P  = Punctuation
-        - S  = Symbol
-        - Z  = Separator (Zs | Zl | Zp)
-        - C  = Other (control, format, etc.)
-
-        Script categories:
-        - Han = CJK ideographs
-        """
-        cat = node.category
-        negated = node.negated
-
-        # Map category to flag check
-        # Based on unicode_cpt_flags from unicode.h:
-        #   is_letter, is_number, is_punctuation, is_symbol, is_accent_mark
-        #   is_separator, is_control, is_whitespace, is_uppercase, is_lowercase
-        cat_map = {
-            # Major categories
-            "L": f"{flags_var}.is_letter",
-            "N": f"{flags_var}.is_number",
-            "P": f"{flags_var}.is_punctuation",
-            "S": f"{flags_var}.is_symbol",
-            "M": f"{flags_var}.is_accent_mark",
-            "Z": f"{flags_var}.is_separator",
-            "C": f"{flags_var}.is_control",
-
-            # Letter subcategories
-            "Lu": f"({flags_var}.is_letter && {flags_var}.is_uppercase)",
-            "Ll": f"({flags_var}.is_letter && {flags_var}.is_lowercase)",
-            "Lt": f"({flags_var}.is_letter && {flags_var}.is_uppercase)",  # Titlecase approximated as uppercase
-            "Lm": f"({flags_var}.is_letter && !{flags_var}.is_uppercase && !{flags_var}.is_lowercase)",  # Modifier letters
-            "Lo": f"({flags_var}.is_letter && !{flags_var}.is_uppercase && !{flags_var}.is_lowercase)",  # Other letters (CJK, etc.)
-
-            # Number subcategories (approximations - all map to is_number)
-            "Nd": f"{flags_var}.is_number",  # Decimal digit
-            "Nl": f"{flags_var}.is_number",  # Letter number (e.g., Roman numerals)
-            "No": f"{flags_var}.is_number",  # Other number
-
-            # Mark subcategories (all map to is_accent_mark)
-            "Mn": f"{flags_var}.is_accent_mark",  # Non-spacing mark
-            "Mc": f"{flags_var}.is_accent_mark",  # Spacing combining mark
-            "Me": f"{flags_var}.is_accent_mark",  # Enclosing mark
-
-            # Script-specific
-            "Han": f"unicode_cpt_is_han({cpt_var})",
-        }
-
-        self.required_helpers.add(cat)
-
-        if cat in cat_map:
-            cond = cat_map[cat]
-        else:
-            # Unknown category - generate a helper function call
-            cond = f"unicode_cpt_is_{cat.lower()}({cpt_var})"
-            self.required_helpers.add(f"unicode_cpt_is_{cat.lower()}")
-
-        if negated:
-            return f"!({cond})"
-        return cond
-
     def _generate_predefined_match(self, node: Predefined):
         """Generate match for predefined class."""
         cond = self._predefined_condition_inline(node)
@@ -1266,21 +1190,6 @@ class CppEmitter:
             "D": "(!_get_flags(match_pos).is_number && _get_flags(match_pos).as_uint())",
             "w": "(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_')",
             "W": "(!(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_') && _get_flags(match_pos).as_uint())",
-        }
-
-        return conditions.get(name, "false")
-
-    def _predefined_condition(self, node: Predefined, cpt_var: str, flags_var: str) -> str:
-        """Generate condition for predefined class."""
-        name = node.name
-
-        conditions = {
-            "s": f"{flags_var}.is_whitespace",
-            "S": f"(!{flags_var}.is_whitespace && {flags_var}.as_uint())",
-            "d": f"{flags_var}.is_number",
-            "D": f"(!{flags_var}.is_number && {flags_var}.as_uint())",
-            "w": f"({flags_var}.is_letter || {flags_var}.is_number || {cpt_var} == '_')",
-            "W": f"(!({flags_var}.is_letter || {flags_var}.is_number || {cpt_var} == '_') && {flags_var}.as_uint())",
         }
 
         return conditions.get(name, "false")
