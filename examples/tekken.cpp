@@ -103,7 +103,7 @@ std::vector<size_t> unicode_regex_split_test(
                     bool seq_matched = false;
                     size_t bt_base = _stack_mark();  // Save stack state
 
-                    // Quantifier 0: [^\r\n\p{L}\p{N}]?")
+                    // Quantifier 0: [^\r\n\p{L}\p{N}]?
                     size_t q0_base = _stack_mark();
                     _stack_push(match_pos);
 
@@ -117,7 +117,6 @@ std::vector<size_t> unicode_regex_split_test(
                             auto f = _get_flags(match_pos);
                             return c != OUT_OF_RANGE && !(c == 13 || c == 10 || f.is_letter || f.is_number);
                         });
-
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -133,7 +132,7 @@ std::vector<size_t> unicode_regex_split_test(
                         match_pos = _stack_get(q0_base, i0);
                         matched = true;
 
-                        // Quantifier 1: [\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]*")
+                        // Quantifier 1: [\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]*
                         size_t q1_base = _stack_mark();
                         _stack_push(match_pos);
 
@@ -146,7 +145,6 @@ std::vector<size_t> unicode_regex_split_test(
                                 auto f = _get_flags(match_pos);
                                 return (f.is_letter && f.is_uppercase) || (f.is_letter && f.is_uppercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || f.is_accent_mark;
                             });
-
                             if (matched && match_pos > save_pos) {
                                 _stack_push(match_pos);
                             } else {
@@ -162,7 +160,7 @@ std::vector<size_t> unicode_regex_split_test(
                             match_pos = _stack_get(q1_base, i1);
                             matched = true;
 
-                            // Quantifier 2: [\p{Ll}\p{Lm}\p{Lo}\p{M}]+")
+                            // Quantifier 2: [\p{Ll}\p{Lm}\p{Lo}\p{M}]+
                             size_t q2_base = _stack_mark();
                             _stack_push(match_pos);
 
@@ -175,7 +173,6 @@ std::vector<size_t> unicode_regex_split_test(
                                     auto f = _get_flags(match_pos);
                                     return (f.is_letter && f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || f.is_accent_mark;
                                 });
-
                                 if (matched && match_pos > save_pos) {
                                     _stack_push(match_pos);
                                 } else {
@@ -204,7 +201,6 @@ std::vector<size_t> unicode_regex_split_test(
                     _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -222,7 +218,7 @@ std::vector<size_t> unicode_regex_split_test(
                     bool seq_matched = false;
                     size_t bt_base = _stack_mark();  // Save stack state
 
-                    // Quantifier 0: [^\r\n\p{L}\p{N}]?")
+                    // Quantifier 0: [^\r\n\p{L}\p{N}]?
                     size_t q0_base = _stack_mark();
                     _stack_push(match_pos);
 
@@ -236,7 +232,6 @@ std::vector<size_t> unicode_regex_split_test(
                             auto f = _get_flags(match_pos);
                             return c != OUT_OF_RANGE && !(c == 13 || c == 10 || f.is_letter || f.is_number);
                         });
-
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -252,7 +247,7 @@ std::vector<size_t> unicode_regex_split_test(
                         match_pos = _stack_get(q0_base, i0);
                         matched = true;
 
-                        // Quantifier 1: [\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]+")
+                        // Quantifier 1: [\p{Lu}\p{Lt}\p{Lm}\p{Lo}\p{M}]+
                         size_t q1_base = _stack_mark();
                         _stack_push(match_pos);
 
@@ -265,7 +260,6 @@ std::vector<size_t> unicode_regex_split_test(
                                 auto f = _get_flags(match_pos);
                                 return (f.is_letter && f.is_uppercase) || (f.is_letter && f.is_uppercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || f.is_accent_mark;
                             });
-
                             if (matched && match_pos > save_pos) {
                                 _stack_push(match_pos);
                             } else {
@@ -281,7 +275,7 @@ std::vector<size_t> unicode_regex_split_test(
                             match_pos = _stack_get(q1_base, i1);
                             matched = true;
 
-                            // Quantifier 2: [\p{Ll}\p{Lm}\p{Lo}\p{M}]*")
+                            // Quantifier 2: [\p{Ll}\p{Lm}\p{Lo}\p{M}]*
                             size_t q2_base = _stack_mark();
                             _stack_push(match_pos);
 
@@ -294,7 +288,6 @@ std::vector<size_t> unicode_regex_split_test(
                                     auto f = _get_flags(match_pos);
                                     return (f.is_letter && f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || (f.is_letter && !f.is_uppercase && !f.is_lowercase) || f.is_accent_mark;
                                 });
-
                                 if (matched && match_pos > save_pos) {
                                     _stack_push(match_pos);
                                 } else {
@@ -323,7 +316,6 @@ std::vector<size_t> unicode_regex_split_test(
                     _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -335,9 +327,7 @@ std::vector<size_t> unicode_regex_split_test(
             {
                 size_t match_pos = pos;
                 bool matched = true;
-
                 _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_number; }); // \p{N}
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -355,16 +345,14 @@ std::vector<size_t> unicode_regex_split_test(
                     bool seq_matched = false;
                     size_t bt_base = _stack_mark();  // Save stack state
 
-                    // Quantifier 0:  ?")
+                    // Quantifier 0:  ?
                     size_t q0_base = _stack_mark();
                     _stack_push(match_pos);
 
                     while (_stack_count(q0_base) <= 1) {
                         size_t save_pos = match_pos;
                         matched = true;
-
                         _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 32; }); // U+0020 ' '
-
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -380,7 +368,7 @@ std::vector<size_t> unicode_regex_split_test(
                         match_pos = _stack_get(q0_base, i0);
                         matched = true;
 
-                        // Quantifier 1: [^\s\p{L}\p{N}]+")
+                        // Quantifier 1: [^\s\p{L}\p{N}]+
                         size_t q1_base = _stack_mark();
                         _stack_push(match_pos);
 
@@ -394,7 +382,6 @@ std::vector<size_t> unicode_regex_split_test(
                                 auto f = _get_flags(match_pos);
                                 return c != OUT_OF_RANGE && !(f.is_whitespace || f.is_letter || f.is_number);
                             });
-
                             if (matched && match_pos > save_pos) {
                                 _stack_push(match_pos);
                             } else {
@@ -410,7 +397,7 @@ std::vector<size_t> unicode_regex_split_test(
                             match_pos = _stack_get(q1_base, i1);
                             matched = true;
 
-                            // Quantifier 2: [\r\n/]*")
+                            // Quantifier 2: [\r\n/]*
                             size_t q2_base = _stack_mark();
                             _stack_push(match_pos);
 
@@ -423,7 +410,6 @@ std::vector<size_t> unicode_regex_split_test(
                                     uint32_t c = _get_cpt(match_pos);
                                     return c == 13 || c == 10 || c == 47;
                                 });
-
                                 if (matched && match_pos > save_pos) {
                                     _stack_push(match_pos);
                                 } else {
@@ -452,7 +438,6 @@ std::vector<size_t> unicode_regex_split_test(
                     _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -470,16 +455,14 @@ std::vector<size_t> unicode_regex_split_test(
                     bool seq_matched = false;
                     size_t bt_base = _stack_mark();  // Save stack state
 
-                    // Quantifier 0: \s*")
+                    // Quantifier 0: \s*
                     size_t q0_base = _stack_mark();
                     _stack_push(match_pos);
 
                     while (true) {
                         size_t save_pos = match_pos;
                         matched = true;
-
                         _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
-
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -495,7 +478,7 @@ std::vector<size_t> unicode_regex_split_test(
                         match_pos = _stack_get(q0_base, i0);
                         matched = true;
 
-                        // Quantifier 1: [\r\n]+")
+                        // Quantifier 1: [\r\n]+
                         size_t q1_base = _stack_mark();
                         _stack_push(match_pos);
 
@@ -508,7 +491,6 @@ std::vector<size_t> unicode_regex_split_test(
                                 uint32_t c = _get_cpt(match_pos);
                                 return c == 13 || c == 10;
                             });
-
                             if (matched && match_pos > save_pos) {
                                 _stack_push(match_pos);
                             } else {
@@ -533,7 +515,6 @@ std::vector<size_t> unicode_regex_split_test(
                     _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -551,16 +532,14 @@ std::vector<size_t> unicode_regex_split_test(
                     bool seq_matched = false;
                     size_t bt_base = _stack_mark();  // Save stack state
 
-                    // Quantifier 0: \s+")
+                    // Quantifier 0: \s+
                     size_t q0_base = _stack_mark();
                     _stack_push(match_pos);
 
                     while (true) {
                         size_t save_pos = match_pos;
                         matched = true;
-
                         _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
-
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -575,9 +554,9 @@ std::vector<size_t> unicode_regex_split_test(
                     for (size_t i0 = q0_count; i0 > 1; i0--) {
                         match_pos = _stack_get(q0_base, i0);
                         matched = true;
+
                         // Negative lookahead
                         {
-
                             size_t save_match_pos = match_pos;
                             bool save_matched = matched;
                             _try_match(match_pos, matched, [&]{ return (!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint()); }); // \S
@@ -593,7 +572,6 @@ std::vector<size_t> unicode_regex_split_test(
                     _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -611,9 +589,7 @@ std::vector<size_t> unicode_regex_split_test(
                     size_t count = 0;
                     while (matched) {
                         size_t save_pos = match_pos;
-
                         _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
-
                         if (!matched || match_pos == save_pos) {
                             match_pos = save_pos;
                             matched = (count > 0);
@@ -622,7 +598,6 @@ std::vector<size_t> unicode_regex_split_test(
                         count++;
                     }
                 }
-
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -634,6 +609,5 @@ std::vector<size_t> unicode_regex_split_test(
             _add_token(++pos);
         }
     }
-
     return bpe_offsets;
 }
