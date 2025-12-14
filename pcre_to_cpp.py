@@ -844,8 +844,8 @@ class CppEmitter:
                 self._emit("")
                 self._emit("// Pre-allocated backtracking stack for quantifier matching")
                 self._emit("// Uses a single vector with base-index tracking to avoid per-match allocations")
-                self._emit("std::vector<size_t> bt_stack;")
-                self._emit("bt_stack.reserve(cpts.size() * 2);")
+                self._emit("std::vector<size_t> stack;")
+                self._emit("stack.reserve(cpts.size() * 2);")
 
             self._emit("")
             self._emit("size_t start = 0;")
@@ -883,6 +883,30 @@ class CppEmitter:
                         return len;
                     ''')
                 self._emit("")
+
+                self._emit("// Helper: Try to match at current position using predicate")
+                self._emit("// Returns true and advances mpos if condition is met")
+                with self._block("auto _try_match = [&](size_t& mpos, bool& mflag, auto condition) -> bool {", "};"):
+                    self._emit_block('''
+                        if (!mflag) return false;
+                        if (condition()) {
+                            mpos++;
+                            return true;
+                        }
+                        mflag = false;
+                        return false;
+                    ''')
+                self._emit("")
+
+                # Emit stack helpers if backtracking is needed
+                if self.uses_backtracking:
+                    self._emit("// Stack helpers for backtracking")
+                    self._emit("auto _stack_mark = [&]() -> size_t { return stack.size(); };")
+                    self._emit("auto _stack_push = [&](size_t p) { stack.push_back(p); };")
+                    self._emit("auto _stack_count = [&](size_t base) -> size_t { return stack.size() - base; };")
+                    self._emit("auto _stack_get = [&](size_t base, size_t idx) -> size_t { return stack[base + idx - 1]; };")
+                    self._emit("auto _stack_restore = [&](size_t base) { stack.resize(base); };")
+                    self._emit("")
 
                 self._emit("// =======================================================")
                 self._emit("// Main matching loop")
@@ -972,26 +996,14 @@ class CppEmitter:
 
         if case_insensitive and node.char.isalpha():
             char_lower = ord(node.char.lower())
-            self._emit_block('''
-                if (matched && unicode_tolower(_get_cpt(match_pos)) == $char_lower) { // $char_desc (case-insensitive)
-                    match_pos++;
-                } else if (matched) { matched = false; }
-            ''', locals())
+            self._emit(f"_try_match(match_pos, matched, [&]{{ return unicode_tolower(_get_cpt(match_pos)) == {char_lower}; }}); // {char_desc} (case-insensitive)")
         else:
-            self._emit_block('''
-                if (matched && _get_cpt(match_pos) == $char_code) { // $char_desc
-                    match_pos++;
-                } else if (matched) { matched = false; }
-            ''', locals())
+            self._emit(f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}")
 
     def _generate_special_match(self, node: SpecialChar):
         char_code = ord(node.char)
         char_desc = self._char_description(node.char)
-        self._emit_block('''
-            if (matched && _get_cpt(match_pos) == $char_code) { // $char_desc
-                match_pos++;
-            } else if (matched) { matched = false; }
-        ''', locals())
+        self._emit(f"_try_match(match_pos, matched, [&]{{ return _get_cpt(match_pos) == {char_code}; }}); // {char_desc}")
 
     def _generate_charclass_match(self, node: CharClass, case_insensitive: bool = False):
         """Generate match for character class."""
@@ -1082,18 +1094,48 @@ class CppEmitter:
 
     def _generate_unicode_cat_match(self, node: UnicodeCategory):
         """Generate match for Unicode category."""
-        var = self._temp_var("cpt")
-        flags_var = f"flags_{var}"
-        cond = self._unicode_cat_condition(node, var, flags_var)
+        cond = self._unicode_cat_condition_inline(node)
+        pattern = self._ast_to_pattern(node)
+        self._emit(f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // {pattern}")
 
-        with self._block("if (matched) {"):
-            self._emit_block('''
-                uint32_t $var = _get_cpt(match_pos);
-                auto $flags_var = _get_flags(match_pos);
-                if ($cond) {
-                    match_pos++;
-                } else { matched = false; }
-            ''', locals())
+    def _unicode_cat_condition_inline(self, node: UnicodeCategory) -> str:
+        """Generate inline condition for Unicode category using match_pos."""
+        cat = node.category
+        negated = node.negated
+
+        cat_map = {
+            "L": "_get_flags(match_pos).is_letter",
+            "N": "_get_flags(match_pos).is_number",
+            "P": "_get_flags(match_pos).is_punctuation",
+            "S": "_get_flags(match_pos).is_symbol",
+            "M": "_get_flags(match_pos).is_accent_mark",
+            "Z": "_get_flags(match_pos).is_separator",
+            "C": "_get_flags(match_pos).is_control",
+            "Lu": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_uppercase)",
+            "Ll": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_lowercase)",
+            "Lt": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_uppercase)",
+            "Lm": "(_get_flags(match_pos).is_letter && !_get_flags(match_pos).is_uppercase && !_get_flags(match_pos).is_lowercase)",
+            "Lo": "(_get_flags(match_pos).is_letter && !_get_flags(match_pos).is_uppercase && !_get_flags(match_pos).is_lowercase)",
+            "Nd": "_get_flags(match_pos).is_number",
+            "Nl": "_get_flags(match_pos).is_number",
+            "No": "_get_flags(match_pos).is_number",
+            "Mn": "_get_flags(match_pos).is_accent_mark",
+            "Mc": "_get_flags(match_pos).is_accent_mark",
+            "Me": "_get_flags(match_pos).is_accent_mark",
+            "Han": "unicode_cpt_is_han(_get_cpt(match_pos))",
+        }
+
+        self.required_helpers.add(cat)
+
+        if cat in cat_map:
+            cond = cat_map[cat]
+        else:
+            cond = f"unicode_cpt_is_{cat.lower()}(_get_cpt(match_pos))"
+            self.required_helpers.add(f"unicode_cpt_is_{cat.lower()}")
+
+        if negated:
+            return f"!({cond})"
+        return cond
 
     def _unicode_cat_condition(self, node: UnicodeCategory, cpt_var: str, flags_var: str) -> str:
         """Generate condition for Unicode category.
@@ -1168,18 +1210,23 @@ class CppEmitter:
 
     def _generate_predefined_match(self, node: Predefined):
         """Generate match for predefined class."""
-        var = self._temp_var("cpt")
-        flags_var = f"flags_{var}"
-        cond = self._predefined_condition(node, var, flags_var)
+        cond = self._predefined_condition_inline(node)
+        self._emit(f"_try_match(match_pos, matched, [&]{{ return {cond}; }}); // \\{node.name}")
 
-        with self._block("if (matched) {"):
-            self._emit_block('''
-                uint32_t $var = _get_cpt(match_pos);
-                auto $flags_var = _get_flags(match_pos);
-                if ($cond) {
-                    match_pos++;
-                } else { matched = false; }
-            ''', locals())
+    def _predefined_condition_inline(self, node: Predefined) -> str:
+        """Generate inline condition for predefined class using match_pos."""
+        name = node.name
+
+        conditions = {
+            "s": "_get_flags(match_pos).is_whitespace",
+            "S": "(!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint())",
+            "d": "_get_flags(match_pos).is_number",
+            "D": "(!_get_flags(match_pos).is_number && _get_flags(match_pos).as_uint())",
+            "w": "(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_')",
+            "W": "(!(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_') && _get_flags(match_pos).as_uint())",
+        }
+
+        return conditions.get(name, "false")
 
     def _predefined_condition(self, node: Predefined, cpt_var: str, flags_var: str) -> str:
         """Generate condition for predefined class."""
@@ -1198,11 +1245,7 @@ class CppEmitter:
 
     def _generate_any_match(self):
         """Generate match for any character."""
-        self._emit_block('''
-            if (matched && _get_cpt(match_pos) != OUT_OF_RANGE) {
-                match_pos++;
-            } else if (matched) { matched = false; }
-        ''')
+        self._emit("_try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) != OUT_OF_RANGE; }); // .")
 
     def _generate_quantifier_match(self, node: Quantifier, case_insensitive: bool = False):
         """Generate match for quantifier."""
@@ -1349,7 +1392,7 @@ class CppEmitter:
     def _ast_needs_backtracking(self, ast: Node) -> bool:
         """Pre-scan AST to determine if any part needs backtracking.
 
-        Used to decide whether to emit the shared bt_stack declaration.
+        Used to decide whether to emit the shared stack declaration.
         """
         if isinstance(ast, Alternation):
             return any(self._ast_needs_backtracking(alt) for alt in ast.alternatives)
@@ -1416,8 +1459,8 @@ class CppEmitter:
     def _generate_sequence_with_backtracking(self, children: list, case_insensitive: bool = False):
         """Generate sequence matching with stack-based backtracking.
 
-        Strategy: Use shared bt_stack with base index tracking.
-        For each non-possessive quantifier, collect ALL possible match positions into bt_stack.
+        Strategy: Use shared stack with base index tracking.
+        For each non-possessive quantifier, collect ALL possible match positions into stack.
         Use nested loops to try all combinations, longest first (greedy) or shortest first (lazy).
         Possessive quantifiers are matched greedily without backtracking.
         """
@@ -1441,14 +1484,14 @@ class CppEmitter:
         self._emit(f"// Sequence with backtracking ({num_quants} quantifiers): {pattern_str}")
         with self._block():
             self._emit("bool seq_matched = false;")
-            self._emit("size_t bt_base = bt_stack.size();  // Save stack state")
+            self._emit("size_t bt_base = _stack_mark();  // Save stack state")
             self._emit("")
 
             # Generate elements before first quantifier
             first_quant_idx = quantifier_indices[0]
             for i in range(first_quant_idx):
                 self._generate_node_match(children[i], case_insensitive)
-                self._emit("if (!matched) { bt_stack.resize(bt_base); }")
+                self._emit("if (!matched) { _stack_restore(bt_base); }")
                 self._emit("else {")
                 self.indent_level += 1
 
@@ -1463,16 +1506,16 @@ class CppEmitter:
                 self._emit("}")
 
             self._emit("")
-            self._emit("bt_stack.resize(bt_base);  // Restore stack state")
+            self._emit("_stack_restore(bt_base);  // Restore stack state")
             self._emit("matched = seq_matched;")
 
     def _generate_stack_based_backtracking(self, children: list, quant_indices: list,
                                             quant_num: int, case_insensitive: bool):
         """Generate stack-based nested loops for multiple quantifiers.
 
-        Uses shared bt_stack with base index tracking instead of per-quantifier vectors.
+        Uses shared stack with base index tracking instead of per-quantifier vectors.
         For each quantifier, we:
-        1. Collect all possible match positions into bt_stack
+        1. Collect all possible match positions into stack
         2. Loop from longest to shortest (greedy) or shortest to longest (lazy)
         3. Inside the loop, either recurse to next quantifier or try remaining pattern
         """
@@ -1487,14 +1530,14 @@ class CppEmitter:
 
         # Collect positions for this quantifier using shared stack
         self._emit(f"// Quantifier {quant_num}: {quant_pattern}")
-        self._emit(f"size_t {base_name} = bt_stack.size();")
-        self._emit("bt_stack.push_back(match_pos);")
+        self._emit(f"size_t {base_name} = _stack_mark();")
+        self._emit("_stack_push(match_pos);")
 
         with self._block():
             if max_c == -1:
                 loop_cond = "while (true) {"
             else:
-                loop_cond = f"while (bt_stack.size() - {base_name} <= {max_c}) {{"
+                loop_cond = f"while (_stack_count({base_name}) <= {max_c}) {{"
             with self._block(loop_cond):
                 self._emit_block('''
                     size_t save_pos = match_pos;
@@ -1503,13 +1546,13 @@ class CppEmitter:
                 self._generate_node_match(quant.child, case_insensitive)
                 self._emit_block('''
                     if (matched && match_pos > save_pos) {
-                        bt_stack.push_back(match_pos);
+                        _stack_push(match_pos);
                     } else {
                         match_pos = save_pos;
                         break;
                     }
                 ''')
-        self._emit(f"size_t {count_name} = bt_stack.size() - {base_name};")
+        self._emit(f"size_t {count_name} = _stack_count({base_name});")
         self._emit("")
 
         # Loop through positions - direction depends on greedy vs lazy
@@ -1522,7 +1565,7 @@ class CppEmitter:
             self._emit(f"// Try quantifier {quant_num} positions shortest-first (lazy, min_count={min_c})")
             loop_header = f"for (size_t i{quant_num} = {min_c} + 1; i{quant_num} <= {count_name}; i{quant_num}++) {{"
         with self._block(loop_header):
-            self._emit(f"match_pos = bt_stack[{base_name} + i{quant_num} - 1];")
+            self._emit(f"match_pos = _stack_get({base_name}, i{quant_num});")
             self._emit("matched = true;")
 
             # Find elements between this quantifier and the next (or end)
@@ -1541,7 +1584,7 @@ class CppEmitter:
                 )
                 # Truncate nested quantifier's positions before trying next outer position
                 next_base = f"q{quant_num + 1}_base"
-                self._emit(f"bt_stack.resize({next_base});")
+                self._emit(f"_stack_restore({next_base});")
                 self._emit("if (seq_matched) break;")
             else:
                 for i in range(next_quant_idx, len(children)):
