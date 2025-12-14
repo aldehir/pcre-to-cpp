@@ -4,6 +4,23 @@ project(regex_test CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
+# Fetch PCRE2 for benchmarking
+include(FetchContent)
+
+FetchContent_Declare(
+    pcre2
+    GIT_REPOSITORY https://github.com/PCRE2Project/pcre2.git
+    GIT_TAG        pcre2-10.44
+)
+
+# PCRE2 build options - disable unnecessary components
+set(PCRE2_BUILD_PCRE2GREP OFF CACHE BOOL "" FORCE)
+set(PCRE2_BUILD_TESTS OFF CACHE BOOL "" FORCE)
+set(PCRE2_SUPPORT_UNICODE ON CACHE BOOL "" FORCE)
+set(PCRE2_SUPPORT_JIT ON CACHE BOOL "" FORCE)
+
+FetchContent_MakeAvailable(pcre2)
+
 # Generated pattern file - set via cmake -DPATTERN_FILE=...
 set(PATTERN_FILE "generated/pattern_split.cpp" CACHE STRING "Path to generated pattern file")
 
@@ -32,3 +49,6 @@ target_include_directories(benchmark PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor
 )
+
+target_link_libraries(benchmark PRIVATE pcre2-8)
+target_compile_definitions(benchmark PRIVATE PCRE2_CODE_UNIT_WIDTH=8)
