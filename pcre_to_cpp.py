@@ -687,21 +687,15 @@ class CppEmitter:
         if not lines:
             return
 
-        # Find minimum indentation (for relative indent preservation)
-        min_indent = float('inf')
-        for line in lines:
-            if line.strip():
-                min_indent = min(min_indent, len(line) - len(line.lstrip()))
-        if min_indent == float('inf'):
-            min_indent = 0
-
-        # Emit each line with current indent level + relative indent
+        # Emit each line with current indent level
+        # After dedent, any remaining leading whitespace is relative indentation to preserve
         base_indent = "    " * self.indent_level
         for line in lines:
             if line.strip():
-                # Preserve indentation relative to the least-indented line
-                relative_indent = line[:len(line) - len(line.lstrip())][min_indent:]
-                self.lines.append(base_indent + relative_indent + line.strip())
+                # line.lstrip() removes leading whitespace, so line[:-len(lstripped)] is the relative indent
+                content = line.lstrip()
+                relative_indent = line[: len(line) - len(content)]
+                self.lines.append(base_indent + relative_indent + content)
             else:
                 self.lines.append("")
 
