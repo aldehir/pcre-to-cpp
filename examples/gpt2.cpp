@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 #include <cstdint>
+
 /**
  * Split text into tokens using the 'test' pattern.
  *
@@ -24,36 +25,36 @@ std::vector<size_t> unicode_regex_split_test(
 ) {
     std::vector<size_t> bpe_offsets;
     bpe_offsets.reserve(offsets.size());
-    
+
     // Convert UTF-8 to codepoints for pattern matching
     const auto cpts = unicode_cpts_from_utf8(text);
-    
+
     // Pre-allocated backtracking stack for quantifier matching
     // Uses a single vector with base-index tracking to avoid per-match allocations
-    std::vector<size_t> bt_stack;
-    bt_stack.reserve(cpts.size() * 2);
-    
+    std::vector<size_t> stack;
+    stack.reserve(cpts.size() * 2);
+
     size_t start = 0;
-    
+
     // Process each chunk from the previous tokenization pass
     for (auto offset : offsets) {
         const size_t offset_ini = start;
         const size_t offset_end = start + offset;
         start = offset_end;
-        
+
         // Sentinel value for out-of-bounds codepoint access
         static const uint32_t OUT_OF_RANGE = 0xFFFFFFFF;
-        
+
         // Helper: Get codepoint at position (returns OUT_OF_RANGE if outside chunk)
         auto _get_cpt = [&](const size_t pos) -> uint32_t {
             return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
         };
-        
+
         // Helper: Get Unicode flags for codepoint at position
         auto _get_flags = [&](const size_t pos) -> unicode_cpt_flags {
             return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
         };
-        
+
         // Helper: Emit a token from _prev_end to 'end'
         size_t _prev_end = offset_ini;
         auto _add_token = [&](const size_t end) -> size_t {
@@ -64,7 +65,26 @@ std::vector<size_t> unicode_regex_split_test(
             _prev_end = end;
             return len;
         };
-        
+
+        // Helper: Try to match at current position using predicate
+        // Returns true and advances mpos if condition is met
+        auto _try_match = [&](size_t& mpos, bool& mflag, auto condition) -> bool {
+            if (!mflag) return false;
+            if (condition()) {
+                mpos++;
+                return true;
+            }
+            mflag = false;
+            return false;
+        };
+
+        // Stack helpers for backtracking
+        auto _stack_mark = [&]() -> size_t { return stack.size(); };
+        auto _stack_push = [&](size_t p) { stack.push_back(p); };
+        auto _stack_count = [&](size_t base) -> size_t { return stack.size() - base; };
+        auto _stack_get = [&](size_t base, size_t idx) -> size_t { return stack[base + idx - 1]; };
+        auto _stack_restore = [&](size_t base) { stack.resize(base); };
+
         // =======================================================
         // Main matching loop
         // Try each alternative in order. First match wins.
@@ -72,443 +92,415 @@ std::vector<size_t> unicode_regex_split_test(
         // On no match: consume single character as fallback.
         // =======================================================
         for (size_t pos = offset_ini; pos < offset_end; ) {
-            
+
             // Alternative: 's
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 115) { // U+0073 's'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 115; }); // U+0073 's'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 't
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 116) { // U+0074 't'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 116; }); // U+0074 't'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 're
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 114) { // U+0072 'r'
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 101) { // U+0065 'e'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 114; }); // U+0072 'r'
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 101; }); // U+0065 'e'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 've
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 118) { // U+0076 'v'
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 101) { // U+0065 'e'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 118; }); // U+0076 'v'
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 101; }); // U+0065 'e'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 'm
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 109) { // U+006D 'm'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 109; }); // U+006D 'm'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 'll
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 108) { // U+006C 'l'
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 108) { // U+006C 'l'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 108; }); // U+006C 'l'
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 108; }); // U+006C 'l'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: 'd
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                if (matched && _get_cpt(match_pos) == 39) { // U+0027 '\''
-                    match_pos++;
-                } else if (matched) { matched = false; }
-                if (matched && _get_cpt(match_pos) == 100) { // U+0064 'd'
-                    match_pos++;
-                } else if (matched) { matched = false; }
+
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 100; }); // U+0064 'd'
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative:  ?\p{L}+
             {
                 size_t match_pos = pos;
                 bool matched = true;
+
                 // Sequence with backtracking (2 quantifiers):  ?\p{L}+
                 {
                     bool seq_matched = false;
-                    size_t bt_base = bt_stack.size();  // Save stack state
-                    
-                    // Quantifier 0:  ?
-                    size_t q0_base = bt_stack.size();
-                    bt_stack.push_back(match_pos);
-                    {
-                        while (bt_stack.size() - q0_base <= 1) {
+                    size_t bt_base = _stack_mark();  // Save stack state
+
+                    // Quantifier 0:  ?")
+                    size_t q0_base = _stack_mark();
+                    _stack_push(match_pos);
+
+                    while (_stack_count(q0_base) <= 1) {
+                        size_t save_pos = match_pos;
+                        matched = true;
+
+                        _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 32; }); // U+0020 ' '
+
+                        if (matched && match_pos > save_pos) {
+                            _stack_push(match_pos);
+                        } else {
+                            match_pos = save_pos;
+                            break;
+                        }
+                    }
+
+                    size_t q0_count = _stack_count(q0_base);
+
+                    // Try quantifier 0 positions longest-first (greedy, min_count=0)
+                    for (size_t i0 = q0_count; i0 > 0; i0--) {
+                        match_pos = _stack_get(q0_base, i0);
+                        matched = true;
+
+                        // Quantifier 1: \p{L}+")
+                        size_t q1_base = _stack_mark();
+                        _stack_push(match_pos);
+
+                        while (true) {
                             size_t save_pos = match_pos;
                             matched = true;
-                            if (matched && _get_cpt(match_pos) == 32) { // U+0020 ' '
-                                match_pos++;
-                            } else if (matched) { matched = false; }
+
+                            _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_letter; }); // \p{L}
+
                             if (matched && match_pos > save_pos) {
-                                bt_stack.push_back(match_pos);
+                                _stack_push(match_pos);
                             } else {
                                 match_pos = save_pos;
                                 break;
                             }
                         }
-                    }
-                    size_t q0_count = bt_stack.size() - q0_base;
-                    
-                    // Try quantifier 0 positions (min_count=0)
-                    for (size_t i0 = q0_count; i0 > 0; i0--) {
-                        match_pos = bt_stack[q0_base + i0 - 1];
-                        matched = true;
-                        // Quantifier 1: \p{L}+
-                        size_t q1_base = bt_stack.size();
-                        bt_stack.push_back(match_pos);
-                        {
-                            while (true) {
-                                size_t save_pos = match_pos;
-                                matched = true;
-                                if (matched) {
-                                    uint32_t cpt_1 = _get_cpt(match_pos);
-                                    auto flags_cpt_1 = _get_flags(match_pos);
-                                    if (flags_cpt_1.is_letter) {
-                                        match_pos++;
-                                    } else { matched = false; }
-                                }
-                                if (matched && match_pos > save_pos) {
-                                    bt_stack.push_back(match_pos);
-                                } else {
-                                    match_pos = save_pos;
-                                    break;
-                                }
-                            }
-                        }
-                        size_t q1_count = bt_stack.size() - q1_base;
-                        
-                        // Try quantifier 1 positions (min_count=1)
+
+                        size_t q1_count = _stack_count(q1_base);
+
+                        // Try quantifier 1 positions longest-first (greedy, min_count=1)
                         for (size_t i1 = q1_count; i1 > 1; i1--) {
-                            match_pos = bt_stack[q1_base + i1 - 1];
+                            match_pos = _stack_get(q1_base, i1);
                             matched = true;
                             if (matched) { seq_matched = true; break; }
                         }
-                        bt_stack.resize(q1_base);
+
+                        _stack_restore(q1_base);
                         if (seq_matched) break;
                     }
-                    
-                    bt_stack.resize(bt_base);  // Restore stack state
+
+                    _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative:  ?\p{N}+
             {
                 size_t match_pos = pos;
                 bool matched = true;
+
                 // Sequence with backtracking (2 quantifiers):  ?\p{N}+
                 {
                     bool seq_matched = false;
-                    size_t bt_base = bt_stack.size();  // Save stack state
-                    
-                    // Quantifier 0:  ?
-                    size_t q0_base = bt_stack.size();
-                    bt_stack.push_back(match_pos);
-                    {
-                        while (bt_stack.size() - q0_base <= 1) {
+                    size_t bt_base = _stack_mark();  // Save stack state
+
+                    // Quantifier 0:  ?")
+                    size_t q0_base = _stack_mark();
+                    _stack_push(match_pos);
+
+                    while (_stack_count(q0_base) <= 1) {
+                        size_t save_pos = match_pos;
+                        matched = true;
+
+                        _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 32; }); // U+0020 ' '
+
+                        if (matched && match_pos > save_pos) {
+                            _stack_push(match_pos);
+                        } else {
+                            match_pos = save_pos;
+                            break;
+                        }
+                    }
+
+                    size_t q0_count = _stack_count(q0_base);
+
+                    // Try quantifier 0 positions longest-first (greedy, min_count=0)
+                    for (size_t i0 = q0_count; i0 > 0; i0--) {
+                        match_pos = _stack_get(q0_base, i0);
+                        matched = true;
+
+                        // Quantifier 1: \p{N}+")
+                        size_t q1_base = _stack_mark();
+                        _stack_push(match_pos);
+
+                        while (true) {
                             size_t save_pos = match_pos;
                             matched = true;
-                            if (matched && _get_cpt(match_pos) == 32) { // U+0020 ' '
-                                match_pos++;
-                            } else if (matched) { matched = false; }
+
+                            _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_number; }); // \p{N}
+
                             if (matched && match_pos > save_pos) {
-                                bt_stack.push_back(match_pos);
+                                _stack_push(match_pos);
                             } else {
                                 match_pos = save_pos;
                                 break;
                             }
                         }
-                    }
-                    size_t q0_count = bt_stack.size() - q0_base;
-                    
-                    // Try quantifier 0 positions (min_count=0)
-                    for (size_t i0 = q0_count; i0 > 0; i0--) {
-                        match_pos = bt_stack[q0_base + i0 - 1];
-                        matched = true;
-                        // Quantifier 1: \p{N}+
-                        size_t q1_base = bt_stack.size();
-                        bt_stack.push_back(match_pos);
-                        {
-                            while (true) {
-                                size_t save_pos = match_pos;
-                                matched = true;
-                                if (matched) {
-                                    uint32_t cpt_2 = _get_cpt(match_pos);
-                                    auto flags_cpt_2 = _get_flags(match_pos);
-                                    if (flags_cpt_2.is_number) {
-                                        match_pos++;
-                                    } else { matched = false; }
-                                }
-                                if (matched && match_pos > save_pos) {
-                                    bt_stack.push_back(match_pos);
-                                } else {
-                                    match_pos = save_pos;
-                                    break;
-                                }
-                            }
-                        }
-                        size_t q1_count = bt_stack.size() - q1_base;
-                        
-                        // Try quantifier 1 positions (min_count=1)
+
+                        size_t q1_count = _stack_count(q1_base);
+
+                        // Try quantifier 1 positions longest-first (greedy, min_count=1)
                         for (size_t i1 = q1_count; i1 > 1; i1--) {
-                            match_pos = bt_stack[q1_base + i1 - 1];
+                            match_pos = _stack_get(q1_base, i1);
                             matched = true;
                             if (matched) { seq_matched = true; break; }
                         }
-                        bt_stack.resize(q1_base);
+
+                        _stack_restore(q1_base);
                         if (seq_matched) break;
                     }
-                    
-                    bt_stack.resize(bt_base);  // Restore stack state
+
+                    _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative:  ?[^\s\p{L}\p{N}]+
             {
                 size_t match_pos = pos;
                 bool matched = true;
+
                 // Sequence with backtracking (2 quantifiers):  ?[^\s\p{L}\p{N}]+
                 {
                     bool seq_matched = false;
-                    size_t bt_base = bt_stack.size();  // Save stack state
-                    
-                    // Quantifier 0:  ?
-                    size_t q0_base = bt_stack.size();
-                    bt_stack.push_back(match_pos);
-                    {
-                        while (bt_stack.size() - q0_base <= 1) {
+                    size_t bt_base = _stack_mark();  // Save stack state
+
+                    // Quantifier 0:  ?")
+                    size_t q0_base = _stack_mark();
+                    _stack_push(match_pos);
+
+                    while (_stack_count(q0_base) <= 1) {
+                        size_t save_pos = match_pos;
+                        matched = true;
+
+                        _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 32; }); // U+0020 ' '
+
+                        if (matched && match_pos > save_pos) {
+                            _stack_push(match_pos);
+                        } else {
+                            match_pos = save_pos;
+                            break;
+                        }
+                    }
+
+                    size_t q0_count = _stack_count(q0_base);
+
+                    // Try quantifier 0 positions longest-first (greedy, min_count=0)
+                    for (size_t i0 = q0_count; i0 > 0; i0--) {
+                        match_pos = _stack_get(q0_base, i0);
+                        matched = true;
+
+                        // Quantifier 1: [^\s\p{L}\p{N}]+")
+                        size_t q1_base = _stack_mark();
+                        _stack_push(match_pos);
+
+                        while (true) {
                             size_t save_pos = match_pos;
                             matched = true;
-                            if (matched && _get_cpt(match_pos) == 32) { // U+0020 ' '
-                                match_pos++;
-                            } else if (matched) { matched = false; }
+
+                            // [^\s\p{L}\p{N}]
+                            _try_match(match_pos, matched, [&]{
+                                uint32_t c = _get_cpt(match_pos);
+                                auto f = _get_flags(match_pos);
+                                return c != OUT_OF_RANGE && !(f.is_whitespace || f.is_letter || f.is_number);
+                            });
+
                             if (matched && match_pos > save_pos) {
-                                bt_stack.push_back(match_pos);
+                                _stack_push(match_pos);
                             } else {
                                 match_pos = save_pos;
                                 break;
                             }
                         }
-                    }
-                    size_t q0_count = bt_stack.size() - q0_base;
-                    
-                    // Try quantifier 0 positions (min_count=0)
-                    for (size_t i0 = q0_count; i0 > 0; i0--) {
-                        match_pos = bt_stack[q0_base + i0 - 1];
-                        matched = true;
-                        // Quantifier 1: [^\s\p{L}\p{N}]+
-                        size_t q1_base = bt_stack.size();
-                        bt_stack.push_back(match_pos);
-                        {
-                            while (true) {
-                                size_t save_pos = match_pos;
-                                matched = true;
-                                // Character class: [^\s\p{L}\p{N}]
-                                if (matched) {
-                                    uint32_t cpt_3 = _get_cpt(match_pos);
-                                    auto flags_cpt_3 = _get_flags(match_pos);
-                                    // Match if NOT any of: \s | \p{L} | \p{N}
-                                    bool in_class = (flags_cpt_3.is_whitespace)
-                                        || (flags_cpt_3.is_letter)
-                                        || (flags_cpt_3.is_number)
-                                    ;
-                                    if (!in_class && cpt_3 != OUT_OF_RANGE) {
-                                        match_pos++;
-                                    } else { matched = false; }
-                                }
-                                if (matched && match_pos > save_pos) {
-                                    bt_stack.push_back(match_pos);
-                                } else {
-                                    match_pos = save_pos;
-                                    break;
-                                }
-                            }
-                        }
-                        size_t q1_count = bt_stack.size() - q1_base;
-                        
-                        // Try quantifier 1 positions (min_count=1)
+
+                        size_t q1_count = _stack_count(q1_base);
+
+                        // Try quantifier 1 positions longest-first (greedy, min_count=1)
                         for (size_t i1 = q1_count; i1 > 1; i1--) {
-                            match_pos = bt_stack[q1_base + i1 - 1];
+                            match_pos = _stack_get(q1_base, i1);
                             matched = true;
                             if (matched) { seq_matched = true; break; }
                         }
-                        bt_stack.resize(q1_base);
+
+                        _stack_restore(q1_base);
                         if (seq_matched) break;
                     }
-                    
-                    bt_stack.resize(bt_base);  // Restore stack state
+
+                    _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // Alternative: \s+(?!\S)
             {
                 size_t match_pos = pos;
                 bool matched = true;
+
                 // Sequence with backtracking (1 quantifiers): \s+(?!\S)
                 {
                     bool seq_matched = false;
-                    size_t bt_base = bt_stack.size();  // Save stack state
-                    
-                    // Quantifier 0: \s+
-                    size_t q0_base = bt_stack.size();
-                    bt_stack.push_back(match_pos);
-                    {
-                        while (true) {
-                            size_t save_pos = match_pos;
-                            matched = true;
-                            if (matched) {
-                                uint32_t cpt_4 = _get_cpt(match_pos);
-                                auto flags_cpt_4 = _get_flags(match_pos);
-                                if (flags_cpt_4.is_whitespace) {
-                                    match_pos++;
-                                } else { matched = false; }
-                            }
-                            if (matched && match_pos > save_pos) {
-                                bt_stack.push_back(match_pos);
-                            } else {
-                                match_pos = save_pos;
-                                break;
-                            }
+                    size_t bt_base = _stack_mark();  // Save stack state
+
+                    // Quantifier 0: \s+")
+                    size_t q0_base = _stack_mark();
+                    _stack_push(match_pos);
+
+                    while (true) {
+                        size_t save_pos = match_pos;
+                        matched = true;
+
+                        _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
+
+                        if (matched && match_pos > save_pos) {
+                            _stack_push(match_pos);
+                        } else {
+                            match_pos = save_pos;
+                            break;
                         }
                     }
-                    size_t q0_count = bt_stack.size() - q0_base;
-                    
-                    // Try quantifier 0 positions (min_count=1)
+
+                    size_t q0_count = _stack_count(q0_base);
+
+                    // Try quantifier 0 positions longest-first (greedy, min_count=1)
                     for (size_t i0 = q0_count; i0 > 1; i0--) {
-                        match_pos = bt_stack[q0_base + i0 - 1];
+                        match_pos = _stack_get(q0_base, i0);
                         matched = true;
                         // Negative lookahead
                         {
+
                             size_t save_match_pos = match_pos;
                             bool save_matched = matched;
-                            if (matched) {
-                                uint32_t cpt_5 = _get_cpt(match_pos);
-                                auto flags_cpt_5 = _get_flags(match_pos);
-                                if ((!flags_cpt_5.is_whitespace && flags_cpt_5.as_uint())) {
-                                    match_pos++;
-                                } else { matched = false; }
-                            }
+                            _try_match(match_pos, matched, [&]{ return (!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint()); }); // \S
                             bool lookahead_success = matched;
                             match_pos = save_match_pos;
                             matched = save_matched && !lookahead_success;
                         }
                         if (!matched) continue;
-                        
+
                         if (matched) { seq_matched = true; break; }
                     }
-                    
-                    bt_stack.resize(bt_base);  // Restore stack state
+
+                    _stack_restore(bt_base);  // Restore stack state
                     matched = seq_matched;
                 }
+
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
                     continue;
                 }
             }
-            
+
             // No alternative matched - emit single character as token
             _add_token(++pos);
         }
     }
-    
+
     return bpe_offsets;
 }

@@ -821,7 +821,10 @@ class CppEmitter:
 
     def _emit(self, line: str = ""):
         """Emit a single line with current indentation."""
-        self.lines.append("    " * self.indent_level + line)
+        if line:
+            self.lines.append("    " * self.indent_level + line)
+        else:
+            self.lines.append("")
 
     def _emit_block(self, template: str, **kwargs):
         """Emit a multi-line template block with auto-dedent.
