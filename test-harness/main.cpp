@@ -220,12 +220,22 @@ RegexResult run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
     return result;
 }
 
+// Token diff entry for mismatches
+struct TokenDiff {
+    size_t index;
+    std::string expected;  // from generated
+    std::string actual;    // from this engine
+};
+
 // Per-engine result structure
 struct EngineResult {
     std::vector<std::string> tokens;
     double time_ms = 0.0;
     bool success = true;
     std::string error;
+    double speedup = 1.0;           // speedup vs generated (generated is always 1.0)
+    bool tokens_match = true;       // whether tokens match generated
+    std::vector<TokenDiff> diffs;   // token differences (populated in test mode)
 };
 
 // Result structure for a single test string
@@ -234,20 +244,35 @@ struct TestResult {
     EngineResult generated;
     EngineResult stl;
     EngineResult pcre2;
-    double speedup_vs_stl;
-    double speedup_vs_pcre2;
-    bool tokens_match_pcre2;  // For test mode: do generated tokens match PCRE2?
 };
+
+// Calculate token diffs between expected (generated) and actual (engine) tokens
+std::vector<TokenDiff> calculate_token_diffs(const std::vector<std::string> & expected,
+                                              const std::vector<std::string> & actual) {
+    std::vector<TokenDiff> diffs;
+    size_t max_len = std::max(expected.size(), actual.size());
+
+    for (size_t i = 0; i < max_len; i++) {
+        std::string exp_tok = i < expected.size() ? expected[i] : "";
+        std::string act_tok = i < actual.size() ? actual[i] : "";
+
+        if (exp_tok != act_tok) {
+            diffs.push_back({i, exp_tok, act_tok});
+        }
+    }
+
+    return diffs;
+}
 
 // Run test/benchmark on a single string with precompiled regexes
 TestResult run_single_test(const std::regex * stl_regex, const std::string & stl_error,
                            pcre2_code * pcre2_regex, pcre2_match_data * pcre2_match_data,
                            bool pcre2_jit_available, const std::string & pcre2_error,
-                           const std::string & text, int iterations) {
+                           const std::string & text, int iterations, bool is_test_mode) {
     TestResult result;
     result.input = text;
 
-    // Run generated code
+    // Run generated code (baseline - speedup is always 1.0, tokens always match itself)
     {
         auto cpts = unicode_cpts_from_utf8(text);
         std::vector<size_t> initial_offsets = { cpts.size() };
@@ -259,6 +284,7 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
         result.generated.time_ms = measure_time_ms(iterations, [&]() {
             volatile auto offsets = unicode_regex_split_test(text, initial_offsets);
         });
+        // generated is the baseline: speedup = 1.0, tokens_match = true (defaults)
     }
 
     // Run STL regex (precompiled)
@@ -272,10 +298,20 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
             result.stl.time_ms = measure_time_ms(iterations, [&]() {
                 run_stl_regex(*stl_regex, text, false);
             });
+            result.stl.speedup = calc_speedup(result.stl.time_ms, result.generated.time_ms, true);
+
+            // Calculate token match and diffs
+            if (is_test_mode) {
+                result.stl.diffs = calculate_token_diffs(result.generated.tokens, result.stl.tokens);
+                result.stl.tokens_match = result.stl.diffs.empty();
+            } else {
+                result.stl.tokens_match = (result.generated.tokens == result.stl.tokens);
+            }
         }
     } else {
         result.stl.success = false;
         result.stl.error = stl_error;
+        result.stl.tokens_match = false;
     }
 
     // Run PCRE2 (precompiled)
@@ -289,18 +325,21 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
             result.pcre2.time_ms = measure_time_ms(iterations, [&]() {
                 run_pcre2_regex(pcre2_regex, pcre2_match_data, pcre2_jit_available, text, false);
             });
+            result.pcre2.speedup = calc_speedup(result.pcre2.time_ms, result.generated.time_ms, true);
+
+            // Calculate token match and diffs
+            if (is_test_mode) {
+                result.pcre2.diffs = calculate_token_diffs(result.generated.tokens, result.pcre2.tokens);
+                result.pcre2.tokens_match = result.pcre2.diffs.empty();
+            } else {
+                result.pcre2.tokens_match = (result.generated.tokens == result.pcre2.tokens);
+            }
         }
     } else {
         result.pcre2.success = false;
         result.pcre2.error = pcre2_error;
+        result.pcre2.tokens_match = false;
     }
-
-    // Calculate speedups
-    result.speedup_vs_stl = calc_speedup(result.stl.time_ms, result.generated.time_ms, result.stl.success);
-    result.speedup_vs_pcre2 = calc_speedup(result.pcre2.time_ms, result.generated.time_ms, result.pcre2.success);
-
-    // Check if generated tokens match PCRE2 (for test mode)
-    result.tokens_match_pcre2 = result.pcre2.success && (result.generated.tokens == result.pcre2.tokens);
 
     return result;
 }
@@ -324,223 +363,229 @@ std::string escape_for_display(const std::string & s, size_t max_len = 40) {
 
 // Helper: create JSON for a regex engine result
 json make_engine_json(const EngineResult & e) {
-    return {
+    json result = {
         {"tokens", e.tokens},
         {"time_ms", e.time_ms},
         {"success", e.success},
-        {"error", e.success ? json(nullptr) : json(e.error)}
+        {"error", e.success ? json(nullptr) : json(e.error)},
+        {"speedup", e.speedup},
+        {"tokens_match", e.tokens_match}
     };
+
+    if (!e.diffs.empty()) {
+        json diffs_json = json::array();
+        for (const auto & d : e.diffs) {
+            diffs_json.push_back({
+                {"index", d.index},
+                {"expected", d.expected},
+                {"actual", d.actual}
+            });
+        }
+        result["diffs"] = diffs_json;
+    }
+
+    return result;
 }
 
 // Helper: print benchmark result for a regex engine
-void print_engine_result(const char * name, const EngineResult & e, double speedup) {
+void print_engine_result(const char * name, const EngineResult & e) {
     if (e.success) {
         std::cerr << "  " << name << ": " << std::fixed << std::setprecision(3)
                   << e.time_ms << "ms (" << e.tokens.size() << " tokens)"
-                  << " [" << std::setprecision(1) << speedup << "x]" << std::endl;
+                  << " [" << std::setprecision(1) << e.speedup << "x]" << std::endl;
     } else {
         std::cerr << "  " << name << ": ERROR - " << e.error << std::endl;
     }
 }
 
-int main() {
-    try {
-        // Read all input from stdin
-        std::stringstream buffer;
-        buffer << std::cin.rdbuf();
-        std::string input = buffer.str();
+int run() {
+    // Read all input from stdin
+    std::stringstream buffer;
+    buffer << std::cin.rdbuf();
+    std::string input = buffer.str();
 
-        // Parse input JSON
-        json input_json = json::parse(input);
-        std::string mode = input_json.value("mode", "bench");
-        std::string stl_pattern = input_json["pretokenizer"].get<std::string>();
-        std::string pcre_pattern = input_json.value("pcre_pattern", stl_pattern);
-        std::vector<std::string> test_strings = input_json["strings"].get<std::vector<std::string>>();
+    // Parse input JSON
+    json input_json = json::parse(input);
+    std::string mode = input_json.value("mode", "bench");
+    std::string stl_pattern = input_json["pretokenizer"].get<std::string>();
+    std::string pcre_pattern = input_json.value("pcre_pattern", stl_pattern);
+    std::vector<std::string> test_strings = input_json["strings"].get<std::vector<std::string>>();
 
-        // Get iterations (default depends on mode)
-        int default_iterations = (mode == "test") ? 1 : 50;
-        int iterations = input_json.value("iterations", default_iterations);
+    // Get iterations (default depends on mode)
+    int default_iterations = (mode == "test") ? 1 : 50;
+    int iterations = input_json.value("iterations", default_iterations);
 
-        bool is_test_mode = (mode == "test");
+    bool is_test_mode = (mode == "test");
 
-        // Precompile regexes
-        auto stl_compile_result = compile_stl_regex(stl_pattern);
-        auto pcre2_compile_result = compile_pcre2_regex(pcre_pattern);
+    // Precompile regexes
+    auto stl_compile_result = compile_stl_regex(stl_pattern);
+    auto pcre2_compile_result = compile_pcre2_regex(pcre_pattern);
 
-        // Run tests/benchmarks
-        std::vector<TestResult> results;
-        double total_generated_ms = 0.0;
-        double total_stl_ms = 0.0;
-        double total_pcre2_ms = 0.0;
-        int stl_failures = 0;
-        int pcre2_failures = 0;
-        double speedup_stl_sum = 0.0;
-        double speedup_pcre2_sum = 0.0;
-        int speedup_stl_count = 0;
-        int speedup_pcre2_count = 0;
-        int token_mismatches = 0;
+    // Run tests/benchmarks
+    std::vector<TestResult> results;
+    double total_generated_ms = 0.0;
+    double total_stl_ms = 0.0;
+    double total_pcre2_ms = 0.0;
+    int stl_failures = 0;
+    int pcre2_failures = 0;
+    double speedup_stl_sum = 0.0;
+    double speedup_pcre2_sum = 0.0;
+    int speedup_stl_count = 0;
+    int speedup_pcre2_count = 0;
+    int token_mismatches = 0;
 
-        // Print header to stderr
+    // Print header to stderr
+    if (is_test_mode) {
+        std::cerr << "=== Test Results ===" << std::endl;
+    } else {
+        std::cerr << "=== Benchmark Results ===" << std::endl;
+    }
+    std::cerr << "Mode: " << mode << std::endl;
+    std::cerr << "Iterations: " << iterations << std::endl;
+    std::cerr << "STL Pattern:   " << escape_for_display(stl_pattern, 60) << std::endl;
+    std::cerr << "PCRE Pattern:  " << escape_for_display(pcre_pattern, 60) << std::endl;
+
+    if (!stl_compile_result.success) {
+        std::cerr << "STL Regex compile:   FAILED - " << stl_compile_result.error << std::endl;
+    } else {
+        std::cerr << "STL Regex compile:   OK" << std::endl;
+    }
+    if (!pcre2_compile_result.success) {
+        std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_result.error << std::endl;
+    } else {
+        std::cerr << "PCRE2 Regex compile: OK (JIT: "
+                  << (pcre2_compile_result.jit_available ? "enabled" : "disabled") << ")" << std::endl;
+    }
+    std::cerr << std::endl;
+
+    for (size_t i = 0; i < test_strings.size(); i++) {
+        const std::string & text = test_strings[i];
+        auto result = run_single_test(
+            stl_compile_result.regex.get(), stl_compile_result.error,
+            pcre2_compile_result.regex, pcre2_compile_result.match_data,
+            pcre2_compile_result.jit_available, pcre2_compile_result.error,
+            text, iterations, is_test_mode);
+        results.push_back(result);
+
+        total_generated_ms += result.generated.time_ms;
+
         if (is_test_mode) {
-            std::cerr << "=== Test Results ===" << std::endl;
-        } else {
-            std::cerr << "=== Benchmark Results ===" << std::endl;
-        }
-        std::cerr << "Mode: " << mode << std::endl;
-        std::cerr << "Iterations: " << iterations << std::endl;
-        std::cerr << "STL Pattern:   " << escape_for_display(stl_pattern, 60) << std::endl;
-        std::cerr << "PCRE Pattern:  " << escape_for_display(pcre_pattern, 60) << std::endl;
+            // Test mode: focus on pass/fail
+            std::string status = result.pcre2.tokens_match ? "PASS" : "FAIL";
+            std::cerr << "[" << status << "] Test " << (i + 1) << ": \""
+                      << escape_for_display(text) << "\" ("
+                      << result.generated.tokens.size() << " tokens)" << std::endl;
 
-        if (!stl_compile_result.success) {
-            std::cerr << "STL Regex compile:   FAILED - " << stl_compile_result.error << std::endl;
+            if (!result.pcre2.tokens_match) {
+                token_mismatches++;
+                // Show mismatch details using precomputed diffs
+                std::cerr << "  Generated: " << result.generated.tokens.size() << " tokens" << std::endl;
+                std::cerr << "  PCRE2:     " << result.pcre2.tokens.size() << " tokens" << std::endl;
+                size_t shown = 0;
+                for (const auto & diff : result.pcre2.diffs) {
+                    if (shown >= 5) {
+                        std::cerr << "    ... and " << (result.pcre2.diffs.size() - 5) << " more differences" << std::endl;
+                        break;
+                    }
+                    std::string gen_tok = diff.expected.empty() ? "<missing>" : ("\"" + escape_for_display(diff.expected, 20) + "\"");
+                    std::string pcre_tok = diff.actual.empty() ? "<missing>" : ("\"" + escape_for_display(diff.actual, 20) + "\"");
+                    std::cerr << "    [" << diff.index << "] Gen: " << gen_tok << " vs PCRE2: " << pcre_tok << std::endl;
+                    shown++;
+                }
+            }
+
+            // Show STL info (informational only)
+            if (result.stl.success) {
+                std::cerr << "  STL: " << (result.stl.tokens_match ? "matches" : "differs") << std::endl;
+            } else {
+                std::cerr << "  STL: " << result.stl.error << std::endl;
+            }
         } else {
-            std::cerr << "STL Regex compile:   OK" << std::endl;
-        }
-        if (!pcre2_compile_result.success) {
-            std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_result.error << std::endl;
-        } else {
-            std::cerr << "PCRE2 Regex compile: OK (JIT: "
-                      << (pcre2_compile_result.jit_available ? "enabled" : "disabled") << ")" << std::endl;
+            // Bench mode: show timing details
+            std::cerr << "Test " << (i + 1) << ": \"" << escape_for_display(text) << "\"" << std::endl;
+            std::cerr << "  Generated: " << std::fixed << std::setprecision(3)
+                      << result.generated.time_ms << "ms (" << result.generated.tokens.size() << " tokens)" << std::endl;
+
+            if (result.stl.success) {
+                total_stl_ms += result.stl.time_ms;
+                speedup_stl_sum += result.stl.speedup;
+                speedup_stl_count++;
+            } else {
+                stl_failures++;
+            }
+            print_engine_result("STL Regex", result.stl);
+
+            if (result.pcre2.success) {
+                total_pcre2_ms += result.pcre2.time_ms;
+                speedup_pcre2_sum += result.pcre2.speedup;
+                speedup_pcre2_count++;
+            } else {
+                pcre2_failures++;
+            }
+            print_engine_result("PCRE2    ", result.pcre2);
+
+            if (!result.pcre2.tokens_match) {
+                token_mismatches++;
+                std::cerr << "  WARNING: Token mismatch vs PCRE2!" << std::endl;
+            }
         }
         std::cerr << std::endl;
+    }
 
-        for (size_t i = 0; i < test_strings.size(); i++) {
-            const std::string & text = test_strings[i];
-            auto result = run_single_test(
-                stl_compile_result.regex.get(), stl_compile_result.error,
-                pcre2_compile_result.regex, pcre2_compile_result.match_data,
-                pcre2_compile_result.jit_available, pcre2_compile_result.error,
-                text, iterations);
-            results.push_back(result);
+    // Print summary to stderr
+    double average_speedup_stl = speedup_stl_count > 0 ? speedup_stl_sum / speedup_stl_count : 0.0;
+    double average_speedup_pcre2 = speedup_pcre2_count > 0 ? speedup_pcre2_sum / speedup_pcre2_count : 0.0;
 
-            total_generated_ms += result.generated.time_ms;
-
-            if (is_test_mode) {
-                // Test mode: focus on pass/fail
-                std::string status = result.tokens_match_pcre2 ? "PASS" : "FAIL";
-                std::cerr << "[" << status << "] Test " << (i + 1) << ": \""
-                          << escape_for_display(text) << "\" ("
-                          << result.generated.tokens.size() << " tokens)" << std::endl;
-
-                if (!result.tokens_match_pcre2) {
-                    token_mismatches++;
-                    // Show mismatch details
-                    std::cerr << "  Generated: " << result.generated.tokens.size() << " tokens" << std::endl;
-                    std::cerr << "  PCRE2:     " << result.pcre2.tokens.size() << " tokens" << std::endl;
-                    size_t max_len = std::max(result.generated.tokens.size(), result.pcre2.tokens.size());
-                    for (size_t j = 0; j < std::min(max_len, size_t(5)); j++) {
-                        std::string gen_tok = j < result.generated.tokens.size()
-                            ? ("\"" + escape_for_display(result.generated.tokens[j], 20) + "\"")
-                            : "<missing>";
-                        std::string pcre_tok = j < result.pcre2.tokens.size()
-                            ? ("\"" + escape_for_display(result.pcre2.tokens[j], 20) + "\"")
-                            : "<missing>";
-                        if (gen_tok != pcre_tok) {
-                            std::cerr << "    [" << j << "] Gen: " << gen_tok << " vs PCRE2: " << pcre_tok << std::endl;
-                        }
-                    }
-                    if (max_len > 5) {
-                        std::cerr << "    ... and " << (max_len - 5) << " more tokens" << std::endl;
-                    }
-                }
-
-                // Show STL info (informational only)
-                if (result.stl.success) {
-                    bool stl_matches = (result.generated.tokens == result.stl.tokens);
-                    std::cerr << "  STL: " << (stl_matches ? "matches" : "differs") << std::endl;
-                } else {
-                    std::cerr << "  STL: " << result.stl.error << std::endl;
-                }
-            } else {
-                // Bench mode: show timing details
-                std::cerr << "Test " << (i + 1) << ": \"" << escape_for_display(text) << "\"" << std::endl;
-                std::cerr << "  Generated: " << std::fixed << std::setprecision(3)
-                          << result.generated.time_ms << "ms (" << result.generated.tokens.size() << " tokens)" << std::endl;
-
-                if (result.stl.success) {
-                    total_stl_ms += result.stl.time_ms;
-                    speedup_stl_sum += result.speedup_vs_stl;
-                    speedup_stl_count++;
-                } else {
-                    stl_failures++;
-                }
-                print_engine_result("STL Regex", result.stl, result.speedup_vs_stl);
-
-                if (result.pcre2.success) {
-                    total_pcre2_ms += result.pcre2.time_ms;
-                    speedup_pcre2_sum += result.speedup_vs_pcre2;
-                    speedup_pcre2_count++;
-                } else {
-                    pcre2_failures++;
-                }
-                print_engine_result("PCRE2    ", result.pcre2, result.speedup_vs_pcre2);
-
-                if (!result.tokens_match_pcre2) {
-                    token_mismatches++;
-                    std::cerr << "  WARNING: Token mismatch vs PCRE2!" << std::endl;
-                }
-            }
-            std::cerr << std::endl;
-        }
-
-        // Print summary to stderr
-        double average_speedup_stl = speedup_stl_count > 0 ? speedup_stl_sum / speedup_stl_count : 0.0;
-        double average_speedup_pcre2 = speedup_pcre2_count > 0 ? speedup_pcre2_sum / speedup_pcre2_count : 0.0;
-
-        std::cerr << "=== Summary ===" << std::endl;
-        if (is_test_mode) {
-            int passed = static_cast<int>(test_strings.size()) - token_mismatches;
-            std::cerr << "Passed: " << passed << "/" << test_strings.size() << std::endl;
-            if (token_mismatches > 0) {
-                std::cerr << "FAILED: " << token_mismatches << " test(s) had token mismatches vs PCRE2" << std::endl;
-            } else {
-                std::cerr << "All tests passed!" << std::endl;
-            }
+    std::cerr << "=== Summary ===" << std::endl;
+    if (is_test_mode) {
+        int passed = static_cast<int>(test_strings.size()) - token_mismatches;
+        std::cerr << "Passed: " << passed << "/" << test_strings.size() << std::endl;
+        if (token_mismatches > 0) {
+            std::cerr << "FAILED: " << token_mismatches << " test(s) had token mismatches vs PCRE2" << std::endl;
         } else {
-            std::cerr << "Total Generated: " << std::fixed << std::setprecision(3) << total_generated_ms << "ms" << std::endl;
-            std::cerr << "Total STL:       " << std::fixed << std::setprecision(3) << total_stl_ms << "ms";
-            if (stl_failures > 0) {
-                std::cerr << " (" << stl_failures << " failures)";
-            }
-            std::cerr << std::endl;
-            std::cerr << "Total PCRE2:     " << std::fixed << std::setprecision(3) << total_pcre2_ms << "ms";
-            if (pcre2_failures > 0) {
-                std::cerr << " (" << pcre2_failures << " failures)";
-            }
-            std::cerr << std::endl;
-            if (speedup_stl_count > 0) {
-                std::cerr << "Speedup vs STL:   " << std::fixed << std::setprecision(1) << average_speedup_stl << "x" << std::endl;
-            }
-            if (speedup_pcre2_count > 0) {
-                std::cerr << "Speedup vs PCRE2: " << std::fixed << std::setprecision(1) << average_speedup_pcre2 << "x" << std::endl;
-            }
-            if (token_mismatches > 0) {
-                std::cerr << "WARNING: " << token_mismatches << " test(s) had token mismatches vs PCRE2" << std::endl;
-            }
+            std::cerr << "All tests passed!" << std::endl;
         }
-
-        // Build JSON output
-        json output;
-        output["mode"] = mode;
-        output["stl_pattern"] = stl_pattern;
-        output["pcre_pattern"] = pcre_pattern;
-        output["iterations"] = iterations;
-
-        json results_json = json::array();
-        for (const auto & r : results) {
-            results_json.push_back({
-                {"input", r.input},
-                {"generated", make_engine_json(r.generated)},
-                {"stl_regex", make_engine_json(r.stl)},
-                {"pcre2", make_engine_json(r.pcre2)},
-                {"speedup_vs_stl", r.speedup_vs_stl},
-                {"speedup_vs_pcre2", r.speedup_vs_pcre2},
-                {"tokens_match_pcre2", r.tokens_match_pcre2}
-            });
+    } else {
+        std::cerr << "Total Generated: " << std::fixed << std::setprecision(3) << total_generated_ms << "ms" << std::endl;
+        std::cerr << "Total STL:       " << std::fixed << std::setprecision(3) << total_stl_ms << "ms";
+        if (stl_failures > 0) {
+            std::cerr << " (" << stl_failures << " failures)";
         }
-        output["results"] = results_json;
+        std::cerr << std::endl;
+        std::cerr << "Total PCRE2:     " << std::fixed << std::setprecision(3) << total_pcre2_ms << "ms";
+        if (pcre2_failures > 0) {
+            std::cerr << " (" << pcre2_failures << " failures)";
+        }
+        std::cerr << std::endl;
+        if (speedup_stl_count > 0) {
+            std::cerr << "Speedup vs STL:   " << std::fixed << std::setprecision(1) << average_speedup_stl << "x" << std::endl;
+        }
+        if (speedup_pcre2_count > 0) {
+            std::cerr << "Speedup vs PCRE2: " << std::fixed << std::setprecision(1) << average_speedup_pcre2 << "x" << std::endl;
+        }
+        if (token_mismatches > 0) {
+            std::cerr << "WARNING: " << token_mismatches << " test(s) had token mismatches vs PCRE2" << std::endl;
+        }
+    }
 
-        output["summary"] = {
+    // Build JSON output
+    json results_json = json::array();
+    for (const auto & r : results) {
+        results_json.push_back({
+            {"input", r.input},
+            {"generated", make_engine_json(r.generated)},
+            {"stl_regex", make_engine_json(r.stl)},
+            {"pcre2", make_engine_json(r.pcre2)}
+        });
+    }
+
+    json output = {
+        {"mode", mode},
+        {"stl_pattern", stl_pattern},
+        {"pcre_pattern", pcre_pattern},
+        {"iterations", iterations},
+        {"results", results_json},
+        {"summary", {
             {"total_generated_ms", total_generated_ms},
             {"total_stl_ms", total_stl_ms},
             {"total_pcre2_ms", total_pcre2_ms},
@@ -550,13 +595,19 @@ int main() {
             {"pcre2_failures", pcre2_failures},
             {"token_mismatches", token_mismatches},
             {"all_passed", token_mismatches == 0}
-        };
+        }}
+    };
 
-        // Output JSON to stdout
-        std::cout << output.dump(2) << std::endl;
+    // Output JSON to stdout
+    std::cout << output.dump(2) << std::endl;
 
-        // Return non-zero exit code if tests failed
-        return (is_test_mode && token_mismatches > 0) ? 1 : 0;
+    // Return non-zero exit code if tests failed
+    return (is_test_mode && token_mismatches > 0) ? 1 : 0;
+}
+
+int main() {
+    try {
+        run();
     }
     catch (const json::exception & e) {
         std::cerr << "JSON error: " << e.what() << std::endl;
