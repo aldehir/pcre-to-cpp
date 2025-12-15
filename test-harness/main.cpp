@@ -363,16 +363,9 @@ int main() {
 
         bool is_test_mode = (mode == "test");
 
-        // Precompile STL regex once
+        // Precompile regexes
         auto stl_compile_result = compile_stl_regex(stl_pattern);
-        std::regex * stl_regex_ptr = stl_compile_result.regex.get();
-        std::string stl_compile_error = stl_compile_result.error;
-
-        // Precompile PCRE2 regex once
         auto pcre2_compile_result = compile_pcre2_regex(pcre_pattern);
-        pcre2_code * pcre2_regex_ptr = pcre2_compile_result.regex;
-        pcre2_match_data * pcre2_match_data_ptr = pcre2_compile_result.match_data;
-        std::string pcre2_compile_error = pcre2_compile_result.error;
 
         // Run tests/benchmarks
         std::vector<TestResult> results;
@@ -399,12 +392,12 @@ int main() {
         std::cerr << "PCRE Pattern:  " << escape_for_display(pcre_pattern, 60) << std::endl;
 
         if (!stl_compile_result.success) {
-            std::cerr << "STL Regex compile:   FAILED - " << stl_compile_error << std::endl;
+            std::cerr << "STL Regex compile:   FAILED - " << stl_compile_result.error << std::endl;
         } else {
             std::cerr << "STL Regex compile:   OK" << std::endl;
         }
         if (!pcre2_compile_result.success) {
-            std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_error << std::endl;
+            std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_result.error << std::endl;
         } else {
             std::cerr << "PCRE2 Regex compile: OK (JIT: "
                       << (pcre2_compile_result.jit_available ? "enabled" : "disabled") << ")" << std::endl;
@@ -413,10 +406,11 @@ int main() {
 
         for (size_t i = 0; i < test_strings.size(); i++) {
             const std::string & text = test_strings[i];
-            auto result = run_single_test(stl_regex_ptr, stl_compile_error,
-                                          pcre2_regex_ptr, pcre2_match_data_ptr,
-                                          pcre2_compile_result.jit_available,
-                                          pcre2_compile_error, text, iterations);
+            auto result = run_single_test(
+                stl_compile_result.regex.get(), stl_compile_result.error,
+                pcre2_compile_result.regex, pcre2_compile_result.match_data,
+                pcre2_compile_result.jit_available, pcre2_compile_result.error,
+                text, iterations);
             results.push_back(result);
 
             total_generated_ms += result.generated.time_ms;
