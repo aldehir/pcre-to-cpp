@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.14)
-project(regex_test CXX)
+project(pcre_to_cpp CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -24,31 +24,18 @@ FetchContent_MakeAvailable(pcre2)
 # Generated pattern file - set via cmake -DPATTERN_FILE=...
 set(PATTERN_FILE "generated/pattern_split.cpp" CACHE STRING "Path to generated pattern file")
 
-# Test harness executable
-add_executable(regex_test
-    test-main.cpp
+# Main executable for test/benchmark harness
+add_executable(runner
+    main.cpp
     unicode.cpp
     unicode-data.cpp
     ${PATTERN_FILE}
 )
 
-target_include_directories(regex_test PRIVATE
+target_include_directories(runner PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_CURRENT_SOURCE_DIR}/vendor
 )
 
-# Benchmark executable for comparing generated code vs STL regex
-add_executable(benchmark
-    benchmark.cpp
-    unicode.cpp
-    unicode-data.cpp
-    ${PATTERN_FILE}
-)
-
-target_include_directories(benchmark PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}
-    ${CMAKE_CURRENT_SOURCE_DIR}/vendor
-)
-
-target_link_libraries(benchmark PRIVATE pcre2-8)
-target_compile_definitions(benchmark PRIVATE PCRE2_CODE_UNIT_WIDTH=8)
+target_link_libraries(runner PRIVATE pcre2-8)
+target_compile_definitions(runner PRIVATE PCRE2_CODE_UNIT_WIDTH=8)
