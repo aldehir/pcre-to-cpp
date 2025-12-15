@@ -177,15 +177,17 @@ def generate_cpp(pattern: str, name: str, verbose: bool = False) -> bool:
     return True
 
 
-def build_cpp(name: str, verbose: bool = False) -> bool:
+def build_cpp(name: str, verbose: bool = False, rebuild: bool = False) -> bool:
     """Build the C++ harness."""
     build_dir = get_build_dir(name)
     build_dir.mkdir(parents=True, exist_ok=True)
 
-    # Clean CMake cache if pattern changed (force reconfigure)
-    cache_file = build_dir / "CMakeCache.txt"
-    if cache_file.exists():
-        cache_file.unlink()
+    # Clean CMake cache if rebuild requested (force reconfigure)
+    if rebuild:
+        cache_file = build_dir / "CMakeCache.txt"
+        if cache_file.exists():
+            cache_file.unlink()
+            print("Removed CMakeCache.txt (forcing rebuild)")
 
     # Pattern file path relative to HARNESS_DIR (where CMakeLists.txt is)
     pattern_file = f"generated/{name}.cpp"
@@ -333,7 +335,7 @@ def print_summary(results: dict, name: str, mode: str):
 
 def run_single_pattern(pcre_pattern: str, stl_pattern: str, test_strings: list[str],
                        name: str, mode: str, iterations: int, verbose: bool = False,
-                       output_json: str = None) -> bool:
+                       output_json: str = None, rebuild: bool = False) -> bool:
     """Run a complete test/benchmark cycle for a single pattern."""
     print(f"\n{'='*60}")
     print(f"{'Test' if mode == 'test' else 'Benchmark'}: {name}")
@@ -350,7 +352,7 @@ def run_single_pattern(pcre_pattern: str, stl_pattern: str, test_strings: list[s
 
     # Step 2: Build
     print("\n[2/3] Building harness executable...")
-    if not build_cpp(name, verbose):
+    if not build_cpp(name, verbose, rebuild):
         return False
 
     # Step 3: Run harness
@@ -490,10 +492,10 @@ def cmd_test(args):
                 continue
 
             # Build name includes input for separate results
-            build_name = f"{name}_{input_name}"
+            build_name = name
 
             if not run_single_pattern(pcre_pattern, stl_pattern, test_strings,
-                                      build_name, "test", iterations, args.verbose, args.output):
+                                      build_name, "test", iterations, args.verbose, args.output, args.rebuild):
                 all_success = False
             total_runs += 1
 
@@ -564,10 +566,10 @@ def cmd_bench(args):
                 continue
 
             # Build name includes input for separate results
-            build_name = f"{name}_{input_name}"
+            build_name = name
 
             if not run_single_pattern(pcre_pattern, stl_pattern, test_strings,
-                                      build_name, "bench", iterations, args.verbose, args.output):
+                                      build_name, "bench", iterations, args.verbose, args.output, args.rebuild):
                 all_success = False
             total_runs += 1
 
@@ -596,6 +598,7 @@ Examples:
   python run.py bench                   # Run all benchmarks
   python run.py bench --iterations 100  # More iterations
   python run.py bench -o results/       # Save JSON results
+  python run.py bench --rebuild         # Force full rebuild (no incremental)
 """
     )
 
@@ -610,6 +613,7 @@ Examples:
         p.add_argument("--list", "-l", action="store_true", help="List available patterns")
         p.add_argument("--output", "-o", help="Save JSON results to file or directory")
         p.add_argument("--iterations", "-i", type=int, help="Number of iterations (default: 1 for test, 50 for bench)")
+        p.add_argument("--rebuild", "-r", action="store_true", help="Force rebuild by removing CMakeCache.txt")
 
     # Test subcommand
     test_parser = subparsers.add_parser("test", help="Run correctness tests")
