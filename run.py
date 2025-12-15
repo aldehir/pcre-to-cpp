@@ -48,14 +48,20 @@ _dataset_cache: dict[str, list[str]] = {}
 # =============================================================================
 
 def load_hf_dataset(input_config: dict, input_name: str) -> list[str]:
-    """Load and chunk a HuggingFace dataset.
+    """Load a HuggingFace dataset for testing/benchmarking.
+
+    Two modes:
+        (a) Individual samples: Use each dataset entry as a test case.
+            Config: max_samples (optional) - limit number of samples
+        (b) Concatenate and chunk: Combine entries, then split into chunks.
+            Config: chunk_size (required), max_chars (optional) - limit total chars before chunking
 
     Args:
-        input_config: Configuration dict with dataset, subset, split, field, max_chars, chunk_size
+        input_config: Configuration dict with dataset, subset, split, field, and mode options
         input_name: Name of this input (for caching and logging)
 
     Returns:
-        List of text chunks for testing/benchmarking
+        List of text strings for testing/benchmarking
     """
     # Check cache first
     if input_name in _dataset_cache:
@@ -70,8 +76,11 @@ def load_hf_dataset(input_config: dict, input_name: str) -> list[str]:
     subset = input_config.get("subset")
     split = input_config.get("split", "train")
     field = input_config.get("field", "text")
+    # Mode (a): use individual samples
+    max_samples = input_config.get("max_samples")
+    # Mode (b): concatenate, limit, and chunk
     max_chars = input_config.get("max_chars")
-    chunk_size = input_config.get("chunk_size", 10000)
+    chunk_size = input_config.get("chunk_size")
 
     # Build dataset identifier for logging
     dataset_id = f"{dataset_name}"
@@ -90,36 +99,37 @@ def load_hf_dataset(input_config: dict, input_name: str) -> list[str]:
         print(f"Error loading dataset '{dataset_id}': {e}", file=sys.stderr)
         return []
 
-    print(f"Concatenating {len(dataset)} entries from field '{field}'...")
-
-    # Concatenate text from dataset
-    if max_chars:
+    if chunk_size:
+        # Mode (b): Concatenate, limit by max_chars, chunk by chunk_size
+        print(f"Concatenating entries from field '{field}'...")
         texts = []
         total_chars = 0
         for item in dataset:
             text = item.get(field, "")
             if not text:
                 continue
-            if total_chars + len(text) > max_chars:
-                remaining = max_chars - total_chars
-                texts.append(text[:remaining])
+            if max_chars and total_chars + len(text) > max_chars:
+                texts.append(text[:max_chars - total_chars])
                 break
             texts.append(text)
             total_chars += len(text)
         full_text = "\n".join(texts)
+        print(f"Total: {len(full_text):,} characters")
+
+        test_strings = [full_text[i:i + chunk_size] for i in range(0, len(full_text), chunk_size)]
+        test_strings = [s for s in test_strings if s.strip()]
+        print(f"Split into {len(test_strings)} chunks of ~{chunk_size} chars")
     else:
-        full_text = "\n".join(item.get(field, "") for item in dataset)
-
-    print(f"Total text length: {len(full_text):,} characters")
-
-    # Split into chunks
-    test_strings = []
-    for i in range(0, len(full_text), chunk_size):
-        chunk = full_text[i:i + chunk_size]
-        if chunk.strip():
-            test_strings.append(chunk)
-
-    print(f"Split into {len(test_strings)} chunks of ~{chunk_size} characters each")
+        # Mode (a): Use individual samples, limit by max_samples
+        limit = max_samples or len(dataset)
+        test_strings = []
+        for item in dataset:
+            if len(test_strings) >= limit:
+                break
+            text = item.get(field, "")
+            if text and text.strip():
+                test_strings.append(text)
+        print(f"Using {len(test_strings)} samples from field '{field}'")
 
     # Cache the result
     _dataset_cache[input_name] = test_strings
@@ -412,9 +422,15 @@ def list_patterns(config: dict, config_path: Path):
     for input_name, input_cfg in inputs_config.items():
         dataset = input_cfg.get("dataset", "?")
         subset = input_cfg.get("subset", "")
-        max_chars = input_cfg.get("max_chars")
-        chars_str = f"{max_chars:,}" if max_chars else "all"
-        print(f"  - {input_name}: {dataset}/{subset} ({chars_str} chars)")
+        chunk_size = input_cfg.get("chunk_size")
+        if chunk_size:
+            max_chars = input_cfg.get("max_chars")
+            chars_str = f"{max_chars:,}" if max_chars else "all"
+            print(f"  - {input_name}: {dataset}/{subset} (chunk mode: {chars_str} chars, {chunk_size} chunk)")
+        else:
+            max_samples = input_cfg.get("max_samples")
+            samples_str = f"{max_samples}" if max_samples else "all"
+            print(f"  - {input_name}: {dataset}/{subset} (sample mode: {samples_str} samples)")
 
 
 def cmd_test(args):
