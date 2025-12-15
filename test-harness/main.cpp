@@ -71,7 +71,7 @@ struct RegexResult {
 };
 
 // Run STL regex with precompiled regex
-RegexResult run_stl_regex(const std::regex & re, const std::string & text) {
+RegexResult run_stl_regex(const std::regex & re, const std::string & text, bool collect_tokens = true) {
     RegexResult result;
 
     try {
@@ -79,7 +79,9 @@ RegexResult run_stl_regex(const std::regex & re, const std::string & text) {
         std::sregex_iterator end;
 
         while (iter != end) {
-            result.tokens.push_back(iter->str());
+            if (collect_tokens) {
+                result.tokens.push_back(iter->str());
+            }
             ++iter;
         }
     }
@@ -181,7 +183,7 @@ Pcre2CompileResult compile_pcre2_regex(const std::string & pattern) {
 }
 
 RegexResult run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
-                            bool use_jit, const std::string & text) {
+                            bool use_jit, const std::string & text, bool collect_tokens = true) {
     RegexResult result;
 
     PCRE2_SIZE start_offset = 0;
@@ -204,7 +206,9 @@ RegexResult run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
         PCRE2_SIZE match_start = ovector[0];
         PCRE2_SIZE match_end = ovector[1];
 
-        result.tokens.push_back(text.substr(match_start, match_end - match_start));
+        if (collect_tokens) {
+            result.tokens.push_back(text.substr(match_start, match_end - match_start));
+        }
         start_offset = match_end;
 
         // Handle zero-length matches
@@ -216,19 +220,20 @@ RegexResult run_pcre2_regex(pcre2_code * re, pcre2_match_data * match_data,
     return result;
 }
 
+// Per-engine result structure
+struct EngineResult {
+    std::vector<std::string> tokens;
+    double time_ms = 0.0;
+    bool success = true;
+    std::string error;
+};
+
 // Result structure for a single test string
 struct TestResult {
     std::string input;
-    double generated_time_ms;
-    double stl_time_ms;
-    double pcre2_time_ms;
-    std::vector<std::string> generated_tokens;
-    std::vector<std::string> stl_tokens;
-    std::vector<std::string> pcre2_tokens;
-    bool stl_success;
-    std::string stl_error;
-    bool pcre2_success;
-    std::string pcre2_error;
+    EngineResult generated;
+    EngineResult stl;
+    EngineResult pcre2;
     double speedup_vs_stl;
     double speedup_vs_pcre2;
     bool tokens_match_pcre2;  // For test mode: do generated tokens match PCRE2?
@@ -248,10 +253,10 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
         std::vector<size_t> initial_offsets = { cpts.size() };
 
         // Warmup run (also gets tokens)
-        result.generated_tokens = offsets_to_tokens(text, unicode_regex_split_test(text, initial_offsets));
+        result.generated.tokens = offsets_to_tokens(text, unicode_regex_split_test(text, initial_offsets));
 
         // Timed runs
-        result.generated_time_ms = measure_time_ms(iterations, [&]() {
+        result.generated.time_ms = measure_time_ms(iterations, [&]() {
             volatile auto offsets = unicode_regex_split_test(text, initial_offsets);
         });
     }
@@ -259,58 +264,43 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
     // Run STL regex (precompiled)
     if (stl_regex) {
         auto warmup_result = run_stl_regex(*stl_regex, text);
-        result.stl_tokens = std::move(warmup_result.tokens);
-        result.stl_success = warmup_result.success;
-        result.stl_error = std::move(warmup_result.error);
+        result.stl.tokens = std::move(warmup_result.tokens);
+        result.stl.success = warmup_result.success;
+        result.stl.error = std::move(warmup_result.error);
 
-        if (result.stl_success) {
-            result.stl_time_ms = measure_time_ms(iterations, [&]() {
-                std::sregex_iterator iter(text.begin(), text.end(), *stl_regex);
-                std::sregex_iterator end;
-                while (iter != end) ++iter;
+        if (result.stl.success) {
+            result.stl.time_ms = measure_time_ms(iterations, [&]() {
+                run_stl_regex(*stl_regex, text, false);
             });
         }
     } else {
-        result.stl_success = false;
-        result.stl_error = stl_error;
+        result.stl.success = false;
+        result.stl.error = stl_error;
     }
 
     // Run PCRE2 (precompiled)
     if (pcre2_regex) {
         auto warmup_result = run_pcre2_regex(pcre2_regex, pcre2_match_data, pcre2_jit_available, text);
-        result.pcre2_tokens = std::move(warmup_result.tokens);
-        result.pcre2_success = warmup_result.success;
-        result.pcre2_error = std::move(warmup_result.error);
+        result.pcre2.tokens = std::move(warmup_result.tokens);
+        result.pcre2.success = warmup_result.success;
+        result.pcre2.error = std::move(warmup_result.error);
 
-        if (result.pcre2_success) {
-            PCRE2_SPTR subject = reinterpret_cast<PCRE2_SPTR>(text.c_str());
-            PCRE2_SIZE subject_length = text.length();
-            result.pcre2_time_ms = measure_time_ms(iterations, [&]() {
-                PCRE2_SIZE start_offset = 0;
-                while (start_offset < subject_length) {
-                    int rc = pcre2_jit_available
-                        ? pcre2_jit_match(pcre2_regex, subject, subject_length,
-                                          start_offset, 0, pcre2_match_data, nullptr)
-                        : pcre2_match(pcre2_regex, subject, subject_length,
-                                      start_offset, 0, pcre2_match_data, nullptr);
-                    if (rc < 0) break;
-                    PCRE2_SIZE * ovector = pcre2_get_ovector_pointer(pcre2_match_data);
-                    start_offset = ovector[1];
-                    if (ovector[0] == ovector[1]) start_offset++;
-                }
+        if (result.pcre2.success) {
+            result.pcre2.time_ms = measure_time_ms(iterations, [&]() {
+                run_pcre2_regex(pcre2_regex, pcre2_match_data, pcre2_jit_available, text, false);
             });
         }
     } else {
-        result.pcre2_success = false;
-        result.pcre2_error = pcre2_error;
+        result.pcre2.success = false;
+        result.pcre2.error = pcre2_error;
     }
 
     // Calculate speedups
-    result.speedup_vs_stl = calc_speedup(result.stl_time_ms, result.generated_time_ms, result.stl_success);
-    result.speedup_vs_pcre2 = calc_speedup(result.pcre2_time_ms, result.generated_time_ms, result.pcre2_success);
+    result.speedup_vs_stl = calc_speedup(result.stl.time_ms, result.generated.time_ms, result.stl.success);
+    result.speedup_vs_pcre2 = calc_speedup(result.pcre2.time_ms, result.generated.time_ms, result.pcre2.success);
 
     // Check if generated tokens match PCRE2 (for test mode)
-    result.tokens_match_pcre2 = result.pcre2_success && (result.generated_tokens == result.pcre2_tokens);
+    result.tokens_match_pcre2 = result.pcre2.success && (result.generated.tokens == result.pcre2.tokens);
 
     return result;
 }
@@ -333,25 +323,23 @@ std::string escape_for_display(const std::string & s, size_t max_len = 40) {
 }
 
 // Helper: create JSON for a regex engine result
-json make_engine_json(const std::vector<std::string> & tokens, double time_ms,
-                      bool success, const std::string & error) {
+json make_engine_json(const EngineResult & e) {
     return {
-        {"tokens", tokens},
-        {"time_ms", time_ms},
-        {"success", success},
-        {"error", success ? json(nullptr) : json(error)}
+        {"tokens", e.tokens},
+        {"time_ms", e.time_ms},
+        {"success", e.success},
+        {"error", e.success ? json(nullptr) : json(e.error)}
     };
 }
 
 // Helper: print benchmark result for a regex engine
-void print_engine_result(const char * name, double time_ms, size_t token_count,
-                         bool success, const std::string & error, double speedup) {
-    if (success) {
+void print_engine_result(const char * name, const EngineResult & e, double speedup) {
+    if (e.success) {
         std::cerr << "  " << name << ": " << std::fixed << std::setprecision(3)
-                  << time_ms << "ms (" << token_count << " tokens)"
+                  << e.time_ms << "ms (" << e.tokens.size() << " tokens)"
                   << " [" << std::setprecision(1) << speedup << "x]" << std::endl;
     } else {
-        std::cerr << "  " << name << ": ERROR - " << error << std::endl;
+        std::cerr << "  " << name << ": ERROR - " << e.error << std::endl;
     }
 }
 
@@ -431,27 +419,27 @@ int main() {
                                           pcre2_compile_error, text, iterations);
             results.push_back(result);
 
-            total_generated_ms += result.generated_time_ms;
+            total_generated_ms += result.generated.time_ms;
 
             if (is_test_mode) {
                 // Test mode: focus on pass/fail
                 std::string status = result.tokens_match_pcre2 ? "PASS" : "FAIL";
                 std::cerr << "[" << status << "] Test " << (i + 1) << ": \""
                           << escape_for_display(text) << "\" ("
-                          << result.generated_tokens.size() << " tokens)" << std::endl;
+                          << result.generated.tokens.size() << " tokens)" << std::endl;
 
                 if (!result.tokens_match_pcre2) {
                     token_mismatches++;
                     // Show mismatch details
-                    std::cerr << "  Generated: " << result.generated_tokens.size() << " tokens" << std::endl;
-                    std::cerr << "  PCRE2:     " << result.pcre2_tokens.size() << " tokens" << std::endl;
-                    size_t max_len = std::max(result.generated_tokens.size(), result.pcre2_tokens.size());
+                    std::cerr << "  Generated: " << result.generated.tokens.size() << " tokens" << std::endl;
+                    std::cerr << "  PCRE2:     " << result.pcre2.tokens.size() << " tokens" << std::endl;
+                    size_t max_len = std::max(result.generated.tokens.size(), result.pcre2.tokens.size());
                     for (size_t j = 0; j < std::min(max_len, size_t(5)); j++) {
-                        std::string gen_tok = j < result.generated_tokens.size()
-                            ? ("\"" + escape_for_display(result.generated_tokens[j], 20) + "\"")
+                        std::string gen_tok = j < result.generated.tokens.size()
+                            ? ("\"" + escape_for_display(result.generated.tokens[j], 20) + "\"")
                             : "<missing>";
-                        std::string pcre_tok = j < result.pcre2_tokens.size()
-                            ? ("\"" + escape_for_display(result.pcre2_tokens[j], 20) + "\"")
+                        std::string pcre_tok = j < result.pcre2.tokens.size()
+                            ? ("\"" + escape_for_display(result.pcre2.tokens[j], 20) + "\"")
                             : "<missing>";
                         if (gen_tok != pcre_tok) {
                             std::cerr << "    [" << j << "] Gen: " << gen_tok << " vs PCRE2: " << pcre_tok << std::endl;
@@ -463,37 +451,35 @@ int main() {
                 }
 
                 // Show STL info (informational only)
-                if (result.stl_success) {
-                    bool stl_matches = (result.generated_tokens == result.stl_tokens);
+                if (result.stl.success) {
+                    bool stl_matches = (result.generated.tokens == result.stl.tokens);
                     std::cerr << "  STL: " << (stl_matches ? "matches" : "differs") << std::endl;
                 } else {
-                    std::cerr << "  STL: " << result.stl_error << std::endl;
+                    std::cerr << "  STL: " << result.stl.error << std::endl;
                 }
             } else {
                 // Bench mode: show timing details
                 std::cerr << "Test " << (i + 1) << ": \"" << escape_for_display(text) << "\"" << std::endl;
                 std::cerr << "  Generated: " << std::fixed << std::setprecision(3)
-                          << result.generated_time_ms << "ms (" << result.generated_tokens.size() << " tokens)" << std::endl;
+                          << result.generated.time_ms << "ms (" << result.generated.tokens.size() << " tokens)" << std::endl;
 
-                if (result.stl_success) {
-                    total_stl_ms += result.stl_time_ms;
+                if (result.stl.success) {
+                    total_stl_ms += result.stl.time_ms;
                     speedup_stl_sum += result.speedup_vs_stl;
                     speedup_stl_count++;
                 } else {
                     stl_failures++;
                 }
-                print_engine_result("STL Regex", result.stl_time_ms, result.stl_tokens.size(),
-                                    result.stl_success, result.stl_error, result.speedup_vs_stl);
+                print_engine_result("STL Regex", result.stl, result.speedup_vs_stl);
 
-                if (result.pcre2_success) {
-                    total_pcre2_ms += result.pcre2_time_ms;
+                if (result.pcre2.success) {
+                    total_pcre2_ms += result.pcre2.time_ms;
                     speedup_pcre2_sum += result.speedup_vs_pcre2;
                     speedup_pcre2_count++;
                 } else {
                     pcre2_failures++;
                 }
-                print_engine_result("PCRE2    ", result.pcre2_time_ms, result.pcre2_tokens.size(),
-                                    result.pcre2_success, result.pcre2_error, result.speedup_vs_pcre2);
+                print_engine_result("PCRE2    ", result.pcre2, result.speedup_vs_pcre2);
 
                 if (!result.tokens_match_pcre2) {
                     token_mismatches++;
@@ -550,9 +536,9 @@ int main() {
         for (const auto & r : results) {
             results_json.push_back({
                 {"input", r.input},
-                {"generated", {{"tokens", r.generated_tokens}, {"time_ms", r.generated_time_ms}}},
-                {"stl_regex", make_engine_json(r.stl_tokens, r.stl_time_ms, r.stl_success, r.stl_error)},
-                {"pcre2", make_engine_json(r.pcre2_tokens, r.pcre2_time_ms, r.pcre2_success, r.pcre2_error)},
+                {"generated", make_engine_json(r.generated)},
+                {"stl_regex", make_engine_json(r.stl)},
+                {"pcre2", make_engine_json(r.pcre2)},
                 {"speedup_vs_stl", r.speedup_vs_stl},
                 {"speedup_vs_pcre2", r.speedup_vs_pcre2},
                 {"tokens_match_pcre2", r.tokens_match_pcre2}
