@@ -2,8 +2,177 @@
 """
 PCRE to C++ Converter
 
-Converts PCRE regular expressions into C++ functions that split input text
-into chunks for LLM pretokenization.
+Converts PCRE regular expressions into C++ functions that split input text into
+chunks for LLM pretokenization.
+
+# Code Generation Strategy
+
+Each regex construct maps to specific C++ code patterns. The generated function
+iterates through codepoints, trying each alternative at each position until one
+matches, then emits a token boundary.
+
+## Literals and Simple Matchers
+
+LiteralChar('a')
+    TRY_MATCH(_get_cpt(match_pos) == 97);  // U+0061 'a'
+
+SpecialChar('\n')
+    TRY_MATCH(_get_cpt(match_pos) == 10);  // U+000A '\n'
+
+AnyChar (.)
+    TRY_MATCH(_get_cpt(match_pos) != OUT_OF_RANGE);  // .
+
+## Character Classes
+
+CharClass [a-z0-9]
+    if (matched) {
+        uint32_t c = _get_cpt(match_pos);
+        matched = ((c >= 97 && c <= 122) || (c >= 48 && c <= 57));
+        if (matched) { match_pos++; }
+    }
+
+CharClass (negated) [^a-z]
+    if (matched) {
+        uint32_t c = _get_cpt(match_pos);
+        matched = (c != OUT_OF_RANGE && !(c >= 97 && c <= 122));
+        if (matched) { match_pos++; }
+    }
+
+## Unicode Categories
+
+\\p{L} (Letter)
+    TRY_MATCH(_get_flags(match_pos).is_letter);
+
+\\p{N} (Number)
+    TRY_MATCH(_get_flags(match_pos).is_number);
+
+\\P{L} (NOT Letter)
+    TRY_MATCH(!(_get_flags(match_pos).is_letter));
+
+\\p{Han} (special-cased)
+    TRY_MATCH(unicode_cpt_is_han(_get_cpt(match_pos)));
+
+## Predefined Classes
+
+\\s (whitespace)
+    TRY_MATCH(_get_flags(match_pos).is_whitespace);
+
+\\d (digit)
+    TRY_MATCH(_get_flags(match_pos).is_number);
+
+\\w (word char)
+    TRY_MATCH(_get_flags(match_pos).is_letter ||
+              _get_flags(match_pos).is_number ||
+              _get_cpt(match_pos) == '_');
+
+\\S, \\D, \\W (negated)
+    Include check for valid codepoint: (!condition && flags.as_uint())
+
+## Quantifiers (Simple Cases)
+
+? (optional)
+    size_t save_pos = match_pos;
+    bool save_matched = matched;
+    <match child>
+    if (!matched) { match_pos = save_pos; matched = save_matched; }
+
+* (zero or more)
+    while (matched) {
+        size_t save_pos = match_pos;
+        <match child>
+        if (!matched || match_pos == save_pos) {
+            match_pos = save_pos; matched = true; break;
+        }
+    }
+
++ (one or more)
+    size_t count = 0;
+    while (matched) {
+        size_t save_pos = match_pos;
+        <match child>
+        if (!matched || match_pos == save_pos) {
+            match_pos = save_pos; matched = (count > 0); break;
+        }
+        count++;
+    }
+
+{n} (exact count)
+    size_t count = 0;
+    while (matched && count < n) { <match child>; if (matched) count++; }
+    if (count < n) matched = false;
+
+{n,m} (range)
+    Similar to above with min/max bounds
+
+## Quantifiers with Backtracking
+
+When a quantifier is followed by something that might fail (lookahead, literal,
+etc.), backtracking is needed. Uses a shared stack with base-index tracking:
+
+\\s+(?!\\S)  (whitespace not followed by non-whitespace)
+    // Collect all possible match lengths into stack
+    size_t q0_base = _stack_mark();
+    _stack_push(match_pos);  // 0 matches
+    while (true) {
+        <try match \\s>
+        if (matched && match_pos > save_pos) {
+            _stack_push(match_pos);  // 1, 2, 3... matches
+        } else break;
+    }
+
+    // Try longest first (greedy), backtrack to shorter
+    for (size_t i0 = q0_count; i0 > min_count; i0--) {
+        match_pos = _stack_get(q0_base, i0);
+        matched = true;
+        <check lookahead>
+        if (matched) { seq_matched = true; break; }
+    }
+
+Lazy quantifiers (*?, +?) iterate shortest-first instead.
+Possessive quantifiers (*+, ++) never backtrack - matched greedily, no stack.
+
+## Alternation
+
+a|bb|ccc
+    // Alternative: a
+    { match_pos = pos; matched = true; <match 'a'>
+      if (matched && match_pos > pos) { pos = match_pos; _add_token(pos); continue; }
+    }
+    // Alternative: bb
+    { match_pos = pos; matched = true; <match 'bb'>
+      if (matched && match_pos > pos) { pos = match_pos; _add_token(pos); continue; }
+    }
+    // Alternative: ccc
+    { ... }
+    // No match - consume single character
+    _add_token(++pos);
+
+## Groups
+
+(?:...)  (non-capturing)
+    Just matches child, no special handling
+
+(?i:...) (case-insensitive)
+    Propagates case_insensitive=True to child matchers
+    Literals use unicode_tolower() for comparison
+
+## Lookahead
+
+(?=pattern)  (positive lookahead)
+    size_t save_match_pos = match_pos;
+    bool save_matched = matched;
+    <match pattern>
+    bool lookahead_success = matched;
+    match_pos = save_match_pos;  // restore position (zero-width)
+    matched = save_matched && lookahead_success;
+
+(?!pattern)  (negative lookahead)
+    Same as above but: matched = save_matched && !lookahead_success;
+
+## Anchors
+
+^ (start), $ (end)
+    No-ops in splitting context (pattern matches anywhere in chunk)
 """
 
 import argparse
