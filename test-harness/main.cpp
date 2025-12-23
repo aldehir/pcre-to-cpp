@@ -287,31 +287,26 @@ TestResult run_single_test(const std::regex * stl_regex, const std::string & stl
         // generated is the baseline: speedup = 1.0, tokens_match = true (defaults)
     }
 
-    // Run STL regex (precompiled)
-    if (stl_regex) {
-        auto warmup_result = run_stl_regex(*stl_regex, text);
-        result.stl.tokens = std::move(warmup_result.tokens);
-        result.stl.success = warmup_result.success;
-        result.stl.error = std::move(warmup_result.error);
+    // Run STL regex (precompiled) - skip in test mode since we only compare against PCRE2
+    if (!is_test_mode) {
+        if (stl_regex) {
+            auto warmup_result = run_stl_regex(*stl_regex, text);
+            result.stl.tokens = std::move(warmup_result.tokens);
+            result.stl.success = warmup_result.success;
+            result.stl.error = std::move(warmup_result.error);
 
-        if (result.stl.success) {
-            result.stl.time_ms = measure_time_ms(iterations, [&]() {
-                run_stl_regex(*stl_regex, text, false);
-            });
-            result.stl.speedup = calc_speedup(result.stl.time_ms, result.generated.time_ms, true);
-
-            // Calculate token match and diffs
-            if (is_test_mode) {
-                result.stl.diffs = calculate_token_diffs(result.generated.tokens, result.stl.tokens);
-                result.stl.tokens_match = result.stl.diffs.empty();
-            } else {
+            if (result.stl.success) {
+                result.stl.time_ms = measure_time_ms(iterations, [&]() {
+                    run_stl_regex(*stl_regex, text, false);
+                });
+                result.stl.speedup = calc_speedup(result.stl.time_ms, result.generated.time_ms, true);
                 result.stl.tokens_match = (result.generated.tokens == result.stl.tokens);
             }
+        } else {
+            result.stl.success = false;
+            result.stl.error = stl_error;
+            result.stl.tokens_match = false;
         }
-    } else {
-        result.stl.success = false;
-        result.stl.error = stl_error;
-        result.stl.tokens_match = false;
     }
 
     // Run PCRE2 (precompiled)
@@ -417,8 +412,11 @@ int run() {
 
     bool is_test_mode = (mode == "test");
 
-    // Precompile regexes
-    auto stl_compile_result = compile_stl_regex(stl_pattern);
+    // Precompile regexes (skip STL in test mode - we only compare against PCRE2)
+    StlRegexCompileResult stl_compile_result;
+    if (!is_test_mode) {
+        stl_compile_result = compile_stl_regex(stl_pattern);
+    }
     auto pcre2_compile_result = compile_pcre2_regex(pcre_pattern);
 
     // Run tests/benchmarks
@@ -442,13 +440,17 @@ int run() {
     }
     std::cerr << "Mode: " << mode << std::endl;
     std::cerr << "Iterations: " << iterations << std::endl;
-    std::cerr << "STL Pattern:   " << escape_for_display(stl_pattern, 60) << std::endl;
+    if (!is_test_mode) {
+        std::cerr << "STL Pattern:   " << escape_for_display(stl_pattern, 60) << std::endl;
+    }
     std::cerr << "PCRE Pattern:  " << escape_for_display(pcre_pattern, 60) << std::endl;
 
-    if (!stl_compile_result.success) {
-        std::cerr << "STL Regex compile:   FAILED - " << stl_compile_result.error << std::endl;
-    } else {
-        std::cerr << "STL Regex compile:   OK" << std::endl;
+    if (!is_test_mode) {
+        if (!stl_compile_result.success) {
+            std::cerr << "STL Regex compile:   FAILED - " << stl_compile_result.error << std::endl;
+        } else {
+            std::cerr << "STL Regex compile:   OK" << std::endl;
+        }
     }
     if (!pcre2_compile_result.success) {
         std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_result.error << std::endl;
@@ -492,13 +494,6 @@ int run() {
                     std::cerr << "    [" << diff.index << "] Gen: " << gen_tok << " vs PCRE2: " << pcre_tok << std::endl;
                     shown++;
                 }
-            }
-
-            // Show STL info (informational only)
-            if (result.stl.success) {
-                std::cerr << "  STL: " << (result.stl.tokens_match ? "matches" : "differs") << std::endl;
-            } else {
-                std::cerr << "  STL: " << result.stl.error << std::endl;
             }
         } else {
             // Bench mode: show timing details
