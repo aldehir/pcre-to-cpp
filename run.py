@@ -263,7 +263,8 @@ def run_harness(name: str, mode: str, stl_pattern: str, pcre_pattern: str,
             stdout=subprocess.PIPE,
             stderr=None,  # Inherit from parent - streams in real-time
             text=True,
-            encoding='utf-8'
+            encoding='utf-8',
+            errors='replace'
         )
     else:
         result = subprocess.run(
@@ -271,7 +272,8 @@ def run_harness(name: str, mode: str, stl_pattern: str, pcre_pattern: str,
             input=input_json,
             capture_output=True,
             text=True,
-            encoding='utf-8'
+            encoding='utf-8',
+            errors='replace'
         )
         # Print stderr on error when not verbose
         if result.stderr and result.returncode != 0:

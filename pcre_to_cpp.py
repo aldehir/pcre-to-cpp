@@ -421,6 +421,11 @@ class PCREParser:
         if not self._match(s):
             raise ValueError(f"Expected {s!r} at position {self.pos}")
 
+    def _with_fragment(self, node: Node, start_pos: int) -> Node:
+        """Set fragment from pattern slice and return node."""
+        node.fragment = self.pattern[start_pos : self.pos]
+        return node
+
     def _parse_alternation(self) -> Node:
         """Parse alternation: sequence ('|' sequence)*"""
         start_pos = self.pos
@@ -432,9 +437,7 @@ class PCREParser:
 
         if len(alternatives) == 1:
             return alternatives[0]
-        result = Alternation(alternatives)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(Alternation(alternatives), start_pos)
 
     def _parse_sequence(self) -> Node:
         """Parse sequence: term+"""
@@ -443,7 +446,7 @@ class PCREParser:
 
         while self.pos < self.length:
             # Stop at alternation or group end
-            if self._peek() in ("|", ")") or self._peek() is None:
+            if self._peek() in ("|", ")"):
                 break
 
             term = self._parse_term()
@@ -455,9 +458,7 @@ class PCREParser:
             raise ValueError(f"Empty sequence at position {self.pos}")
         if len(terms) == 1:
             return terms[0]
-        result = Sequence(terms)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(Sequence(terms), start_pos)
 
     def _parse_term(self) -> Optional[Node]:
         """Parse term: atom quantifier?"""
@@ -470,9 +471,7 @@ class PCREParser:
         quantifier = self._parse_quantifier()
         if quantifier:
             min_c, max_c, greedy, possessive = quantifier
-            result = Quantifier(atom, min_c, max_c, greedy, possessive)
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(Quantifier(atom, min_c, max_c, greedy, possessive), start_pos)
 
         return atom
 
@@ -499,23 +498,17 @@ class PCREParser:
         if ch == ".":
             start_pos = self.pos
             self._advance()
-            result = AnyChar()
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(AnyChar(), start_pos)
 
         # Anchors
         if ch == "^":
             start_pos = self.pos
             self._advance()
-            result = Anchor("start")
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(Anchor("start"), start_pos)
         if ch == "$":
             start_pos = self.pos
             self._advance()
-            result = Anchor("end")
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(Anchor("end"), start_pos)
 
         # Special characters that end atoms
         if ch in "|)":
@@ -528,9 +521,7 @@ class PCREParser:
         # Literal character
         start_pos = self.pos
         self._advance()
-        result = LiteralChar(ch)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(LiteralChar(ch), start_pos)
 
     def _parse_escape(self) -> Node:
         """Parse escape sequence."""
@@ -554,24 +545,18 @@ class PCREParser:
             category = self.pattern[cat_start : self.pos]
             self._expect("}")
 
-            result = UnicodeCategory(category, negated)
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(UnicodeCategory(category, negated), start_pos)
 
         # Predefined classes
         if ch in "sSwWdD":
             self._advance()
-            result = Predefined(ch)
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(Predefined(ch), start_pos)
 
         # Special escapes
         escape_map = {"r": "\r", "n": "\n", "t": "\t"}
         if ch in escape_map:
             self._advance()
-            result = SpecialChar(escape_map[ch])
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(SpecialChar(escape_map[ch]), start_pos)
 
         # Hex escape: \xNN
         if ch == "x":
@@ -580,15 +565,11 @@ class PCREParser:
             if len(hex_digits) != 2:
                 raise ValueError(f"Invalid hex escape at position {self.pos}")
             self._advance(2)
-            result = LiteralChar(chr(int(hex_digits, 16)))
-            result.fragment = self.pattern[start_pos : self.pos]
-            return result
+            return self._with_fragment(LiteralChar(chr(int(hex_digits, 16))), start_pos)
 
         # Escaped literal (special chars)
         self._advance()
-        result = LiteralChar(ch)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(LiteralChar(ch), start_pos)
 
     def _parse_charclass(self) -> CharClass:
         """Parse character class: [...]"""
@@ -625,9 +606,7 @@ class PCREParser:
                 items.append(item)
 
         self._expect("]")
-        result = CharClass(items, negated)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(CharClass(items, negated), start_pos)
 
     def _parse_cc_item(self) -> Node:
         """Parse a single item in a character class."""
@@ -638,15 +617,11 @@ class PCREParser:
 
         start_pos = self.pos
         self._advance()
-        result = LiteralChar(ch)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(LiteralChar(ch), start_pos)
 
     def _cc_item_char(self, item: Node) -> Optional[str]:
         """Extract character from char class item, if possible."""
-        if isinstance(item, LiteralChar):
-            return item.char
-        if isinstance(item, SpecialChar):
+        if isinstance(item, (LiteralChar, SpecialChar)):
             return item.char
         return None
 
@@ -660,58 +635,37 @@ class PCREParser:
             self._advance()
             modifier = self._peek()
 
-            if modifier == ":":
-                # Non-capturing: (?:...)
-                self._advance()
-                child = self._parse_alternation()
-                self._expect(")")
-                result = GroupNode(child, capturing=False)
-                result.fragment = self.pattern[start_pos : self.pos]
-                return result
-
-            elif modifier == "i":
+            if modifier == "i":
                 # Case-insensitive: (?i:...)
                 self._advance()
                 self._expect(":")
-                child = self._parse_alternation()
-                self._expect(")")
-                result = GroupNode(child, capturing=False, case_insensitive=True)
-                result.fragment = self.pattern[start_pos : self.pos]
-                return result
-
-            elif modifier == "=":
-                # Positive lookahead: (?=...)
+            elif modifier in ":=!":
                 self._advance()
-                child = self._parse_alternation()
-                self._expect(")")
-                result = Lookahead(child, positive=True)
-                result.fragment = self.pattern[start_pos : self.pos]
-                return result
-
-            elif modifier == "!":
-                # Negative lookahead: (?!...)
-                self._advance()
-                child = self._parse_alternation()
-                self._expect(")")
-                result = Lookahead(child, positive=False)
-                result.fragment = self.pattern[start_pos : self.pos]
-                return result
-
             elif modifier == "<":
-                # Lookbehind - not supported
                 raise ValueError(f"Lookbehind is not supported (position {self.pos})")
-
             else:
                 raise ValueError(
                     f"Unknown group modifier '?{modifier}' at position {self.pos}"
                 )
 
+            child = self._parse_alternation()
+            self._expect(")")
+
+            if modifier == ":":
+                node = GroupNode(child, capturing=False)
+            elif modifier == "i":
+                node = GroupNode(child, capturing=False, case_insensitive=True)
+            elif modifier == "=":
+                node = Lookahead(child, positive=True)
+            else:  # modifier == "!"
+                node = Lookahead(child, positive=False)
+
+            return self._with_fragment(node, start_pos)
+
         # Capturing group
         child = self._parse_alternation()
         self._expect(")")
-        result = GroupNode(child, capturing=True)
-        result.fragment = self.pattern[start_pos : self.pos]
-        return result
+        return self._with_fragment(GroupNode(child, capturing=True), start_pos)
 
     def _parse_quantifier(self) -> Optional[Tuple[int, int, bool, bool]]:
         """Parse quantifier: *, +, ?, {n}, {n,}, {n,m} with optional lazy (?) or possessive (+)"""
@@ -895,36 +849,25 @@ class CppEmitter:
         func_name = self.name
 
         # File header with original pattern
+        self.emit("""\
+            // Auto-generated by pcre_to_cpp.py
+            // Do not edit manually
+        """)
         if self.pattern:
-            self.emit(
-                """\
-                // Auto-generated by pcre_to_cpp.py
-                // Do not edit manually
+            self.emit("""\
                 //
                 // Original PCRE pattern:
                 //
                 //   $pattern
                 //
+            """, pattern=self.pattern)
+        self.emit("""
+            #include "unicode.h"
 
-                #include "unicode.h"
-
-                #include <string>
-                #include <vector>
-                #include <cstdint>
-            """,
-                pattern=self.pattern,
-            )
-        else:
-            self.emit("""\
-                // Auto-generated by pcre_to_cpp.py
-                // Do not edit manually
-
-                #include "unicode.h"
-
-                #include <string>
-                #include <vector>
-                #include <cstdint>
-            """)
+            #include <string>
+            #include <vector>
+            #include <cstdint>
+        """)
 
         # Helpful macros
         self.emit("""
@@ -1132,7 +1075,7 @@ class CppEmitter:
     def _generate_special_match(self, node: SpecialChar):
         char_code = ord(node.char)
         char_desc = self._char_description(node.char)
-        self.emit(f"TRY_MATCH(get_cpt(match_pos) == {char_code}); // {char_desc}")
+        self.emit(f"TRY_MATCH(_get_cpt(match_pos) == {char_code}); // {char_desc}")
 
     def _generate_charclass_match(
         self, node: CharClass, case_insensitive: bool = False
@@ -1190,27 +1133,13 @@ class CppEmitter:
                 needs_flags = True
                 if item.category == "Han":
                     needs_cpt = True
-                    cond = (
-                        "unicode_cpt_is_han(c)"
-                        if not item.negated
-                        else "!unicode_cpt_is_han(c)"
-                    )
-                else:
-                    cond = self._unicode_cat_flags_condition(item)
+                cond = self._unicode_cat_condition(item, "f", "c")
                 conditions.append(cond)
             elif isinstance(item, Predefined):
                 needs_flags = True
-                needs_cpt = (
-                    True  # Some predefined classes use cpt (e.g., \w checks for '_')
-                )
-                cond = self._predefined_flags_condition(item)
-                conditions.append(cond)
-            elif isinstance(item, str):
                 needs_cpt = True
-                if case_insensitive and item.isalpha():
-                    conditions.append(f"unicode_tolower(c) == {ord(item.lower())}")
-                else:
-                    conditions.append(f"c == {ord(item)}")
+                cond = self._predefined_condition(item, "f", "c")
+                conditions.append(cond)
 
         if not conditions:
             # Empty character class
@@ -1229,112 +1158,67 @@ class CppEmitter:
         else:
             return (needs_cpt, needs_flags, combined)
 
-    def _unicode_cat_flags_condition(self, node: UnicodeCategory) -> str:
-        """Generate flags-based condition for Unicode category (uses 'f' variable)."""
+    def _unicode_cat_condition(self, node: UnicodeCategory, flags_acc: str, cpt_acc: str) -> str:
+        """Generate condition for Unicode category.
+
+        Args:
+            flags_acc: Expression for flags access (e.g., 'f' or '_get_flags(match_pos)')
+            cpt_acc: Expression for codepoint access (e.g., 'c' or '_get_cpt(match_pos)')
+        """
         cat = node.category
         cat_map = {
-            "L": "f.is_letter",
-            "N": "f.is_number",
-            "P": "f.is_punctuation",
-            "S": "f.is_symbol",
-            "M": "f.is_accent_mark",
-            "Z": "f.is_separator",
-            "C": "f.is_control",
-            "Lu": "(f.is_letter && f.is_uppercase)",
-            "Ll": "(f.is_letter && f.is_lowercase)",
-            "Lt": "(f.is_letter && f.is_uppercase)",
-            "Lm": "(f.is_letter && !f.is_uppercase && !f.is_lowercase)",
-            "Lo": "(f.is_letter && !f.is_uppercase && !f.is_lowercase)",
-            "Nd": "f.is_number",
-            "Nl": "f.is_number",
-            "No": "f.is_number",
-            "Mn": "f.is_accent_mark",
-            "Mc": "f.is_accent_mark",
-            "Me": "f.is_accent_mark",
+            "L": f"{flags_acc}.is_letter",
+            "N": f"{flags_acc}.is_number",
+            "P": f"{flags_acc}.is_punctuation",
+            "S": f"{flags_acc}.is_symbol",
+            "M": f"{flags_acc}.is_accent_mark",
+            "Z": f"{flags_acc}.is_separator",
+            "C": f"{flags_acc}.is_control",
+            "Lu": f"({flags_acc}.is_letter && {flags_acc}.is_uppercase)",
+            "Ll": f"({flags_acc}.is_letter && {flags_acc}.is_lowercase)",
+            "Lt": f"({flags_acc}.is_letter && {flags_acc}.is_uppercase)",
+            "Lm": f"({flags_acc}.is_letter && !{flags_acc}.is_uppercase && !{flags_acc}.is_lowercase)",
+            "Lo": f"({flags_acc}.is_letter && !{flags_acc}.is_uppercase && !{flags_acc}.is_lowercase)",
+            "Nd": f"{flags_acc}.is_number",
+            "Nl": f"{flags_acc}.is_number",
+            "No": f"{flags_acc}.is_number",
+            "Mn": f"{flags_acc}.is_accent_mark",
+            "Mc": f"{flags_acc}.is_accent_mark",
+            "Me": f"{flags_acc}.is_accent_mark",
+            "Han": f"unicode_cpt_is_han({cpt_acc})",
         }
 
         if cat in cat_map:
             cond = cat_map[cat]
         else:
-            cond = f"unicode_cpt_is_{cat.lower()}(c)"
+            cond = f"unicode_cpt_is_{cat.lower()}({cpt_acc})"
 
         if node.negated:
             return f"!({cond})"
         return cond
 
-    def _predefined_flags_condition(self, node: Predefined) -> str:
-        """Generate flags-based condition for predefined class (uses 'c' and 'f' variables)."""
+    def _predefined_condition(self, node: Predefined, flags_acc: str, cpt_acc: str) -> str:
+        """Generate condition for predefined class."""
         name = node.name
         conditions = {
-            "s": "f.is_whitespace",
-            "S": "(!f.is_whitespace && f.as_uint())",
-            "d": "f.is_number",
-            "D": "(!f.is_number && f.as_uint())",
-            "w": "(f.is_letter || f.is_number || c == '_')",
-            "W": "(!(f.is_letter || f.is_number || c == '_') && f.as_uint())",
+            "s": f"{flags_acc}.is_whitespace",
+            "S": f"(!{flags_acc}.is_whitespace && {flags_acc}.as_uint())",
+            "d": f"{flags_acc}.is_number",
+            "D": f"(!{flags_acc}.is_number && {flags_acc}.as_uint())",
+            "w": f"({flags_acc}.is_letter || {flags_acc}.is_number || {cpt_acc} == '_')",
+            "W": f"(!({flags_acc}.is_letter || {flags_acc}.is_number || {cpt_acc} == '_') && {flags_acc}.as_uint())",
         }
         return conditions.get(name, "false")
 
     def _generate_unicode_cat_match(self, node: UnicodeCategory):
         """Generate match for Unicode category."""
-        cond = self._unicode_cat_condition_inline(node)
+        cond = self._unicode_cat_condition(node, "_get_flags(match_pos)", "_get_cpt(match_pos)")
         self.emit(f"TRY_MATCH({cond}); // {node.fragment}")
-
-    def _unicode_cat_condition_inline(self, node: UnicodeCategory) -> str:
-        """Generate inline condition for Unicode category using match_pos."""
-        cat = node.category
-        negated = node.negated
-
-        cat_map = {
-            "L": "_get_flags(match_pos).is_letter",
-            "N": "_get_flags(match_pos).is_number",
-            "P": "_get_flags(match_pos).is_punctuation",
-            "S": "_get_flags(match_pos).is_symbol",
-            "M": "_get_flags(match_pos).is_accent_mark",
-            "Z": "_get_flags(match_pos).is_separator",
-            "C": "_get_flags(match_pos).is_control",
-            "Lu": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_uppercase)",
-            "Ll": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_lowercase)",
-            "Lt": "(_get_flags(match_pos).is_letter && _get_flags(match_pos).is_uppercase)",
-            "Lm": "(_get_flags(match_pos).is_letter && !_get_flags(match_pos).is_uppercase && !_get_flags(match_pos).is_lowercase)",
-            "Lo": "(_get_flags(match_pos).is_letter && !_get_flags(match_pos).is_uppercase && !_get_flags(match_pos).is_lowercase)",
-            "Nd": "_get_flags(match_pos).is_number",
-            "Nl": "_get_flags(match_pos).is_number",
-            "No": "_get_flags(match_pos).is_number",
-            "Mn": "_get_flags(match_pos).is_accent_mark",
-            "Mc": "_get_flags(match_pos).is_accent_mark",
-            "Me": "_get_flags(match_pos).is_accent_mark",
-            "Han": "unicode_cpt_is_han(_get_cpt(match_pos))",
-        }
-
-        if cat in cat_map:
-            cond = cat_map[cat]
-        else:
-            cond = f"unicode_cpt_is_{cat.lower()}(_get_cpt(match_pos))"
-
-        if negated:
-            return f"!({cond})"
-        return cond
 
     def _generate_predefined_match(self, node: Predefined):
         """Generate match for predefined class."""
-        cond = self._predefined_condition_inline(node)
+        cond = self._predefined_condition(node, "_get_flags(match_pos)", "_get_cpt(match_pos)")
         self.emit(f"TRY_MATCH({cond}); // \\{node.name}")
-
-    def _predefined_condition_inline(self, node: Predefined) -> str:
-        """Generate inline condition for predefined class using match_pos."""
-        name = node.name
-
-        conditions = {
-            "s": "_get_flags(match_pos).is_whitespace",
-            "S": "(!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint())",
-            "d": "_get_flags(match_pos).is_number",
-            "D": "(!_get_flags(match_pos).is_number && _get_flags(match_pos).as_uint())",
-            "w": "(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_')",
-            "W": "(!(_get_flags(match_pos).is_letter || _get_flags(match_pos).is_number || _get_cpt(match_pos) == '_') && _get_flags(match_pos).as_uint())",
-        }
-
-        return conditions.get(name, "false")
 
     def _generate_any_match(self):
         """Generate match for any character."""
@@ -1348,19 +1232,10 @@ class CppEmitter:
         max_c = node.max_count
 
         if min_c == 0 and max_c == 1:
-            # Optional: ?
             self._generate_optional_match(node.child, case_insensitive)
-        elif min_c == 0 and max_c == -1:
-            # Zero or more: *
-            self._generate_star_match(node.child, case_insensitive)
-        elif min_c == 1 and max_c == -1:
-            # One or more: +
-            self._generate_plus_match(node.child, case_insensitive)
         elif min_c == max_c:
-            # Exact count: {n}
             self._generate_exact_match(node.child, min_c, case_insensitive)
         else:
-            # Range: {n,m}
             self._generate_range_match(node.child, min_c, max_c, case_insensitive)
 
     def _generate_optional_match(self, child: Node, case_insensitive: bool = False):
@@ -1381,39 +1256,6 @@ class CppEmitter:
                 }
             """)
 
-    def _generate_star_match(self, child: Node, case_insensitive: bool = False):
-        """Generate match for zero or more (*)."""
-        self.emit()
-        self.emit("// Zero or more")
-        with self._block("while (matched) {"):
-            self.emit("size_t save_pos = match_pos;\n")
-            self._generate_node_match(child, case_insensitive)
-            self.emit("""
-                if (!matched || match_pos == save_pos) {
-                    match_pos = save_pos;
-                    matched = true;
-                    break;
-                }
-            """)
-
-    def _generate_plus_match(self, child: Node, case_insensitive: bool = False):
-        """Generate match for one or more (+)."""
-        self.emit()
-        self.emit("// One or more")
-        with self._block():
-            self.emit("size_t count = 0;")
-            with self._block("while (matched) {"):
-                self.emit("size_t save_pos = match_pos;\n")
-                self._generate_node_match(child, case_insensitive)
-                self.emit("""
-                    if (!matched || match_pos == save_pos) {
-                        match_pos = save_pos;
-                        matched = (count > 0);
-                        break;
-                    }
-                    count++;
-                """)
-
     def _generate_exact_match(
         self, child: Node, exact_count: int, case_insensitive: bool = False
     ):
@@ -1430,44 +1272,38 @@ class CppEmitter:
     def _generate_range_match(
         self, child: Node, min_c: int, max_c: int, case_insensitive: bool = False
     ):
-        """Generate match for range {n,m}."""
+        """Generate match for *, +, {n,}, {n,m} quantifiers."""
         self.emit()
         if max_c == -1:
-            self.emit(f"// {min_c} or more matches")
-            with self._block():
-                self.emit("size_t count = 0;")
-                with self._block("while (matched) {"):
-                    self.emit("size_t save_pos = match_pos;\n")
-                    self._generate_node_match(child, case_insensitive)
-                    self.emit(
-                        """\
-                        if (!matched || match_pos == save_pos) {
-                            match_pos = save_pos;
-                            matched = (count >= $min_c);
-                            break;
-                        }
-                        count++;
-                    """,
-                        min_c=min_c,
-                    )
+            if min_c == 0:
+                self.emit("// Zero or more")
+            elif min_c == 1:
+                self.emit("// One or more")
+            else:
+                self.emit(f"// {min_c} or more matches")
         else:
             self.emit(f"// {min_c} to {max_c} matches")
-            with self._block():
-                self.emit("size_t count = 0;")
-                with self._block(f"while (matched && count < {max_c}) {{"):
-                    self.emit("size_t save_pos = match_pos;\n")
-                    self._generate_node_match(child, case_insensitive)
-                    self.emit(
-                        """\
-                        if (!matched || match_pos == save_pos) {
-                            match_pos = save_pos;
-                            matched = (count >= $min_c);
-                            break;
-                        }
-                        count++;
-                    """,
-                        min_c=min_c,
-                    )
+
+        loop_cond = "while (matched) {" if max_c == -1 else f"while (matched && count < {max_c}) {{"
+        exit_cond = "true" if min_c == 0 else f"(count >= {min_c})"
+
+        with self._block():
+            self.emit("size_t count = 0;")
+            with self._block(loop_cond):
+                self.emit("size_t save_pos = match_pos;\n")
+                self._generate_node_match(child, case_insensitive)
+                self.emit(
+                    """\
+                    if (!matched || match_pos == save_pos) {
+                        match_pos = save_pos;
+                        matched = $exit_cond;
+                        break;
+                    }
+                    count++;
+                """,
+                    exit_cond=exit_cond,
+                )
+            if max_c != -1:
                 self.emit(f"if (count < {min_c}) matched = false;")
 
     def _generate_group_match(self, node: GroupNode):
@@ -1511,71 +1347,24 @@ class CppEmitter:
         """
         if isinstance(ast, Alternation):
             return any(self._ast_needs_backtracking(alt) for alt in ast.alternatives)
-        elif isinstance(ast, Sequence):
+        if isinstance(ast, Sequence):
             return self._needs_backtracking(ast.children)
-        elif isinstance(ast, GroupNode):
+        if isinstance(ast, GroupNode):
             return self._ast_needs_backtracking(ast.child)
-        elif isinstance(ast, Quantifier):
-            # A lone quantifier doesn't need backtracking unless inside a sequence
-            return False
-        return False
-
-    def _contains_backtracking_quantifier(self, node: Node) -> bool:
-        """Check if a node or its children contain non-possessive quantifiers."""
-        if isinstance(node, Quantifier):
-            # Possessive quantifiers don't need backtracking
-            return not node.possessive
-        if isinstance(node, Sequence):
-            return any(self._contains_backtracking_quantifier(c) for c in node.children)
-        if isinstance(node, GroupNode):
-            return self._contains_backtracking_quantifier(node.child)
-        if isinstance(node, Alternation):
-            return any(
-                self._contains_backtracking_quantifier(a) for a in node.alternatives
-            )
         return False
 
     def _needs_backtracking(self, children: list) -> bool:
         """Determine if a sequence needs backtracking support.
 
-        Returns True if there's a non-possessive quantifier followed by something that could fail.
-        Possessive quantifiers never backtrack, so they don't trigger this.
+        Returns True if there's a non-possessive quantifier followed by something
+        that could fail (anything except an anchor).
         """
-        has_backtracking_quantifier = False
-        for i, child in enumerate(children):
-            # Check if this child is a non-possessive quantifier
-            is_backtracking_quant = (
-                isinstance(child, Quantifier) and not child.possessive
-            ) or (
-                isinstance(child, GroupNode)
-                and self._contains_backtracking_quantifier(child.child)
-            )
-
-            # Check BEFORE updating has_backtracking_quantifier
-            if has_backtracking_quantifier:
-                # Something after a non-possessive quantifier - might need backtracking
-                if isinstance(
-                    child,
-                    (
-                        Lookahead,
-                        LiteralChar,
-                        CharClass,
-                        Predefined,
-                        UnicodeCategory,
-                        SpecialChar,
-                        AnyChar,
-                    ),
-                ):
-                    return True
-                if isinstance(child, GroupNode):
-                    return True
-                if isinstance(child, Alternation):
-                    return True
-                if is_backtracking_quant:
-                    return True  # Multiple backtracking quantifiers in sequence
-
-            if is_backtracking_quant:
-                has_backtracking_quantifier = True
+        has_quantifier = False
+        for child in children:
+            if has_quantifier and not isinstance(child, Anchor):
+                return True
+            if isinstance(child, Quantifier) and not child.possessive:
+                has_quantifier = True
         return False
 
     def _generate_sequence_match(self, children: list, case_insensitive: bool = False):
@@ -1597,16 +1386,10 @@ class CppEmitter:
         Use nested loops to try all combinations, longest first (greedy) or shortest first (lazy).
         Possessive quantifiers are matched greedily without backtracking.
         """
-        quantifier_indices = []
-        for i, child in enumerate(children):
-            # Only include non-possessive quantifiers in backtracking
-            if isinstance(child, Quantifier) and not child.possessive:
-                quantifier_indices.append(i)
-
-        if not quantifier_indices:
-            for child in children:
-                self._generate_node_match(child, case_insensitive)
-            return
+        quantifier_indices = [
+            i for i, child in enumerate(children)
+            if isinstance(child, Quantifier) and not child.possessive
+        ]
 
         pattern_str = "".join(c.fragment for c in children[:5])
         if len(children) > 5:
