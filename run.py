@@ -150,6 +150,22 @@ def get_generated_file(name: str) -> Path:
     return HARNESS_DIR / "generated" / f"{name}.cpp"
 
 
+def _run_cmd(cmd: list[str], verbose: bool = False, error_label: str = "Command failed",
+             **kwargs) -> subprocess.CompletedProcess:
+    """Run a subprocess, capturing output unless verbose."""
+    if verbose:
+        result = subprocess.run(cmd, text=True, **kwargs)
+    else:
+        result = subprocess.run(cmd, capture_output=True, text=True, **kwargs)
+    if result.returncode != 0 and not verbose:
+        stderr = getattr(result, 'stderr', '') or ''
+        stdout = getattr(result, 'stdout', '') or ''
+        detail = (stderr + '\n' + stdout).strip()
+        if detail:
+            print(f"{error_label}: {detail}", file=sys.stderr)
+    return result
+
+
 def generate_cpp(pattern: str, name: str, verbose: bool = False) -> bool:
     """Generate C++ code from PCRE pattern."""
     output_file = get_generated_file(name)
@@ -163,14 +179,8 @@ def generate_cpp(pattern: str, name: str, verbose: bool = False) -> bool:
         "--output", str(output_file)
     ]
 
-    if verbose:
-        result = subprocess.run(cmd, text=True)
-    else:
-        result = subprocess.run(cmd, capture_output=True, text=True)
-
+    result = _run_cmd(cmd, verbose, error_label="Error generating C++ code")
     if result.returncode != 0:
-        if not verbose and result.stderr:
-            print(f"Error generating C++ code: {result.stderr}", file=sys.stderr)
         return False
 
     print(f"Generated: {output_file}")
@@ -194,26 +204,14 @@ def build_cpp(name: str, verbose: bool = False, rebuild: bool = False) -> bool:
 
     # Configure (build dir is 2 levels deep: builds/{name}/)
     configure_cmd = ["cmake", f"-DPATTERN_FILE={pattern_file}", "-DCMAKE_BUILD_TYPE=Release", "../.."]
-    if verbose:
-        result = subprocess.run(configure_cmd, cwd=build_dir, text=True)
-    else:
-        result = subprocess.run(configure_cmd, cwd=build_dir, capture_output=True, text=True)
-
+    result = _run_cmd(configure_cmd, verbose, error_label="CMake configure failed", cwd=build_dir)
     if result.returncode != 0:
-        if not verbose and result.stderr:
-            print(f"CMake configure failed: {result.stderr}", file=sys.stderr)
         return False
 
     # Build
     build_cmd = ["cmake", "--build", ".", "--config", "Release"]
-    if verbose:
-        result = subprocess.run(build_cmd, cwd=build_dir, text=True)
-    else:
-        result = subprocess.run(build_cmd, cwd=build_dir, capture_output=True, text=True)
-
+    result = _run_cmd(build_cmd, verbose, error_label="Build failed", cwd=build_dir)
     if result.returncode != 0:
-        if not verbose and (result.stderr or result.stdout):
-            print(f"Build failed: {result.stderr}\n{result.stdout}", file=sys.stderr)
         return False
 
     print("Build successful")
@@ -281,7 +279,8 @@ def run_harness(name: str, mode: str, stl_pattern: str, pcre_pattern: str,
 
     # In test mode, non-zero exit means test failures (but output is still valid)
     if mode != "test" and result.returncode != 0:
-        print(f"Harness execution failed", file=sys.stderr)
+        stderr = getattr(result, 'stderr', '') or ''
+        print(f"Harness execution failed{': ' + stderr.strip() if stderr.strip() else ''}", file=sys.stderr)
         return None
 
     try:
@@ -294,12 +293,10 @@ def run_harness(name: str, mode: str, stl_pattern: str, pcre_pattern: str,
 def print_summary(results: dict, name: str, mode: str):
     """Print a formatted summary of results."""
     summary = results.get("summary", {})
+    label = "TEST" if mode == "test" else "BENCHMARK"
 
     print(f"\n{'='*60}")
-    if mode == "test":
-        print(f"TEST SUMMARY: {name}")
-    else:
-        print(f"BENCHMARK SUMMARY: {name}")
+    print(f"{label} SUMMARY: {name}")
     print(f"{'='*60}")
 
     if mode == "test":
@@ -310,29 +307,14 @@ def print_summary(results: dict, name: str, mode: str):
         else:
             print(f"FAILED: {mismatches} test(s) had token mismatches vs PCRE2")
     else:
-        print(f"Total Generated C++ time: {summary.get('total_generated_ms', 0):.3f}ms")
-        print(f"Total STL Regex time:     {summary.get('total_stl_ms', 0):.3f}ms")
-        print(f"Total PCRE2 time:         {summary.get('total_pcre2_ms', 0):.3f}ms")
-
-        stl_failures = summary.get('stl_failures', 0)
-        if stl_failures > 0:
-            print(f"STL Regex failures:       {stl_failures}")
-
-        pcre2_failures = summary.get('pcre2_failures', 0)
-        if pcre2_failures > 0:
-            print(f"PCRE2 failures:           {pcre2_failures}")
-
-        avg_speedup_stl = summary.get('average_speedup_vs_stl', 0)
-        if avg_speedup_stl > 0:
-            print(f"Speedup vs STL:           {avg_speedup_stl:.1f}x")
-
-        avg_speedup_pcre2 = summary.get('average_speedup_vs_pcre2', 0)
-        if avg_speedup_pcre2 > 0:
-            print(f"Speedup vs PCRE2:         {avg_speedup_pcre2:.1f}x")
-
-        mismatches = summary.get('token_mismatches', 0)
-        if mismatches > 0:
-            print(f"Token mismatches vs PCRE2: {mismatches}")
+        print(f"Total Generated C++ time:  {summary.get('total_generated_ms', 0):.3f}ms")
+        print(f"Total STL Regex time:      {summary.get('total_stl_ms', 0):.3f}ms")
+        print(f"Total PCRE2 time:          {summary.get('total_pcre2_ms', 0):.3f}ms")
+        print(f"Speedup vs STL:            {summary.get('average_speedup_vs_stl', 0):.1f}x")
+        print(f"Speedup vs PCRE2:          {summary.get('average_speedup_vs_pcre2', 0):.1f}x")
+        print(f"STL Regex failures:        {summary.get('stl_failures', 0)}")
+        print(f"PCRE2 failures:            {summary.get('pcre2_failures', 0)}")
+        print(f"Token mismatches vs PCRE2: {summary.get('token_mismatches', 0)}")
 
 
 def run_single_pattern(pcre_pattern: str, stl_pattern: str, test_strings: list[str],
@@ -437,8 +419,14 @@ def list_patterns(config: dict, config_path: Path):
             print(f"  - {input_name}: {dataset}/{subset} (sample mode: {samples_str} samples)")
 
 
-def cmd_test(args):
-    """Run tests (correctness verification)."""
+_MODE_DEFAULTS = {
+    "test": {"iterations": 1, "success_msg": "TEST(S) PASSED", "fail_msg": "SOME TESTS FAILED"},
+    "bench": {"iterations": 50, "success_msg": "BENCHMARK(S) COMPLETED SUCCESSFULLY", "fail_msg": "SOME BENCHMARKS FAILED"},
+}
+
+
+def cmd_run(args, mode: str):
+    """Run tests or benchmarks for all configured patterns."""
     config = load_config(Path(args.config))
 
     if args.list:
@@ -459,10 +447,10 @@ def cmd_test(args):
             print(f"Error: No pattern named '{args.name}' found")
             return 1
 
-    # Run tests
+    mode_cfg = _MODE_DEFAULTS[mode]
     all_success = True
     total_runs = 0
-    iterations = args.iterations if args.iterations else 1  # Default 1 for tests
+    iterations = args.iterations or mode_cfg["iterations"]
 
     for benchmark in benchmarks:
         name = benchmark.get("name", "unnamed")
@@ -479,107 +467,28 @@ def cmd_test(args):
             print(f"Warning: Pattern '{name}' has no inputs specified", file=sys.stderr)
             continue
 
-        # Run test against each input separately
         for input_name in input_names:
             if input_name not in inputs_config:
                 print(f"Error: Input '{input_name}' not found in inputs config", file=sys.stderr)
                 all_success = False
                 continue
 
-            input_config = inputs_config[input_name]
-            test_strings = load_hf_dataset(input_config, input_name)
+            test_strings = load_hf_dataset(inputs_config[input_name], input_name)
 
             if not test_strings:
                 print(f"Warning: No test strings loaded for input '{input_name}'", file=sys.stderr)
                 continue
 
-            # Build name includes input for separate results
-            build_name = name
-
             if not run_single_pattern(pcre_pattern, stl_pattern, test_strings,
-                                      build_name, "test", iterations, args.verbose, args.output, args.rebuild):
+                                      name, mode, iterations, args.verbose, args.output, args.rebuild):
                 all_success = False
             total_runs += 1
 
     print(f"\n{'='*60}")
     if all_success:
-        print(f"ALL {total_runs} TEST(S) PASSED")
+        print(f"ALL {total_runs} {mode_cfg['success_msg']}")
     else:
-        print(f"SOME TESTS FAILED")
-    print(f"{'='*60}")
-
-    return 0 if all_success else 1
-
-
-def cmd_bench(args):
-    """Run benchmarks (performance comparison)."""
-    config = load_config(Path(args.config))
-
-    if args.list:
-        list_patterns(config, Path(args.config))
-        return 0
-
-    inputs_config = config.get("inputs", {})
-    benchmarks = config.get("benchmarks", [])
-
-    if not isinstance(benchmarks, list):
-        print(f"Error: 'benchmarks' should be a list", file=sys.stderr)
-        return 1
-
-    # Filter by name if specified
-    if args.name:
-        benchmarks = [b for b in benchmarks if b.get("name") == args.name]
-        if not benchmarks:
-            print(f"Error: No pattern named '{args.name}' found")
-            return 1
-
-    # Run benchmarks
-    all_success = True
-    total_runs = 0
-    iterations = args.iterations if args.iterations else 50  # Default 50 for benchmarks
-
-    for benchmark in benchmarks:
-        name = benchmark.get("name", "unnamed")
-        pcre_pattern = benchmark.get("pcre_pattern")
-        stl_pattern = benchmark.get("stl_pattern", "")
-        input_names = benchmark.get("inputs", [])
-
-        if not pcre_pattern:
-            print(f"Error: Pattern '{name}' missing 'pcre_pattern'", file=sys.stderr)
-            all_success = False
-            continue
-
-        if not input_names:
-            print(f"Warning: Pattern '{name}' has no inputs specified", file=sys.stderr)
-            continue
-
-        # Run benchmark against each input separately
-        for input_name in input_names:
-            if input_name not in inputs_config:
-                print(f"Error: Input '{input_name}' not found in inputs config", file=sys.stderr)
-                all_success = False
-                continue
-
-            input_config = inputs_config[input_name]
-            test_strings = load_hf_dataset(input_config, input_name)
-
-            if not test_strings:
-                print(f"Warning: No test strings loaded for input '{input_name}'", file=sys.stderr)
-                continue
-
-            # Build name includes input for separate results
-            build_name = name
-
-            if not run_single_pattern(pcre_pattern, stl_pattern, test_strings,
-                                      build_name, "bench", iterations, args.verbose, args.output, args.rebuild):
-                all_success = False
-            total_runs += 1
-
-    print(f"\n{'='*60}")
-    if all_success:
-        print(f"ALL {total_runs} BENCHMARK(S) COMPLETED SUCCESSFULLY")
-    else:
-        print(f"SOME BENCHMARKS FAILED")
+        print(mode_cfg["fail_msg"])
     print(f"{'='*60}")
 
     return 0 if all_success else 1
@@ -620,12 +529,12 @@ Examples:
     # Test subcommand
     test_parser = subparsers.add_parser("test", help="Run correctness tests")
     add_common_args(test_parser)
-    test_parser.set_defaults(func=cmd_test)
+    test_parser.set_defaults(func=lambda args: cmd_run(args, "test"))
 
     # Bench subcommand
     bench_parser = subparsers.add_parser("bench", help="Run performance benchmarks")
     add_common_args(bench_parser)
-    bench_parser.set_defaults(func=cmd_bench)
+    bench_parser.set_defaults(func=lambda args: cmd_run(args, "bench"))
 
     args = parser.parse_args()
 
