@@ -588,9 +588,7 @@ int run() {
 
     // Compute summary statistics from results
     double total_generated_ms = 0.0, total_stl_ms = 0.0, total_boost_ms = 0.0, total_pcre2_ms = 0.0;
-    double speedup_stl_sum = 0.0, speedup_boost_sum = 0.0, speedup_pcre2_sum = 0.0;
     int stl_failures = 0, boost_failures = 0, pcre2_failures = 0;
-    int speedup_stl_count = 0, speedup_boost_count = 0, speedup_pcre2_count = 0;
     int token_mismatches = 0;
 
     for (const auto & r : results) {
@@ -598,30 +596,24 @@ int run() {
         if (!r.pcre2.tokens_match) token_mismatches++;
         if (r.stl.success) {
             total_stl_ms += r.stl.time_ms;
-            speedup_stl_sum += r.stl.speedup;
-            speedup_stl_count++;
         } else if (!is_test_mode) {
             stl_failures++;
         }
         if (r.boost.success && r.boost.time_ms > 0) {
             total_boost_ms += r.boost.time_ms;
-            speedup_boost_sum += r.boost.speedup;
-            speedup_boost_count++;
         } else if (!is_test_mode && r.boost.error.size() > 0) {
             boost_failures++;
         }
         if (r.pcre2.success) {
             total_pcre2_ms += r.pcre2.time_ms;
-            speedup_pcre2_sum += r.pcre2.speedup;
-            speedup_pcre2_count++;
         } else {
             pcre2_failures++;
         }
     }
 
-    double average_speedup_stl = speedup_stl_count > 0 ? speedup_stl_sum / speedup_stl_count : 0.0;
-    double average_speedup_boost = speedup_boost_count > 0 ? speedup_boost_sum / speedup_boost_count : 0.0;
-    double average_speedup_pcre2 = speedup_pcre2_count > 0 ? speedup_pcre2_sum / speedup_pcre2_count : 0.0;
+    double average_speedup_stl = (total_stl_ms > 0 && total_generated_ms > 0) ? total_stl_ms / total_generated_ms : 0.0;
+    double average_speedup_boost = (total_boost_ms > 0 && total_generated_ms > 0) ? total_boost_ms / total_generated_ms : 0.0;
+    double average_speedup_pcre2 = (total_pcre2_ms > 0 && total_generated_ms > 0) ? total_pcre2_ms / total_generated_ms : 0.0;
 
     // Print summary to stderr
     std::cerr << "=== Summary ===" << std::endl;
@@ -639,7 +631,7 @@ int run() {
         std::cerr << "Total STL:       " << total_stl_ms << "ms";
         if (stl_failures > 0) std::cerr << " (" << stl_failures << " failures)";
         std::cerr << std::endl;
-        if (speedup_boost_count > 0) {
+        if (total_boost_ms > 0) {
             std::cerr << "Total Boost:     " << total_boost_ms << "ms";
             if (boost_failures > 0) std::cerr << " (" << boost_failures << " failures)";
             std::cerr << std::endl;
@@ -648,13 +640,13 @@ int run() {
         if (pcre2_failures > 0) std::cerr << " (" << pcre2_failures << " failures)";
         std::cerr << std::endl;
         std::cerr << std::setprecision(1);
-        if (speedup_stl_count > 0) {
+        if (average_speedup_stl > 0) {
             std::cerr << "Speedup vs STL:   " << average_speedup_stl << "x" << std::endl;
         }
-        if (speedup_boost_count > 0) {
+        if (average_speedup_boost > 0) {
             std::cerr << "Speedup vs Boost: " << average_speedup_boost << "x" << std::endl;
         }
-        if (speedup_pcre2_count > 0) {
+        if (average_speedup_pcre2 > 0) {
             std::cerr << "Speedup vs PCRE2: " << average_speedup_pcre2 << "x" << std::endl;
         }
         if (token_mismatches > 0) {
