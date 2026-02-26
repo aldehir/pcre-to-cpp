@@ -431,68 +431,68 @@ _MODE_DEFAULTS = {
 }
 
 
-def _plot_speedup_bars(bench_data: list[tuple[str, dict]], output_dir: Path,
-                       fmt: str, dpi: int):
-    """Grouped bar chart of speedup factors per pattern."""
+def _plot_timing_bars(bench_data: list[tuple[str, dict]], output_dir: Path,
+                      fmt: str, dpi: int):
+    """Horizontal grouped bar chart showing total time per engine per pattern."""
     import matplotlib.pyplot as plt
     import numpy as np
 
-    engines = []
     engine_keys = [
-        ("STL", "average_speedup_vs_stl"),
-        ("Boost", "average_speedup_vs_boost"),
-        ("PCRE2", "average_speedup_vs_pcre2"),
+        ("Generated", "total_generated_ms", "tab:blue"),
+        ("PCRE2 (JIT)", "total_pcre2_ms", "tab:red"),
+        ("Boost", "total_boost_ms", "tab:green"),
+        ("STL", "total_stl_ms", "tab:orange"),
     ]
-    # Only include engines that have non-zero speedup in at least one file
-    for label, key in engine_keys:
-        if any(d["summary"].get(key, 0) > 0 for _, d in bench_data):
-            engines.append((label, key))
+    # Only include engines that have non-zero time in at least one file
+    engines = [(label, key, color) for label, key, color in engine_keys
+               if any(d["summary"].get(key, 0) > 0 for _, d in bench_data)]
 
     if not engines:
-        print("Warning: No speedup data found, skipping speedup chart")
+        print("Warning: No timing data found, skipping timing chart")
         return
 
-    labels = [name for name, _ in bench_data]
-    x = np.arange(len(labels))
-    width = 0.8 / len(engines)
+    # Strip _benchmark suffix from labels
+    labels = [name.removesuffix("_benchmark") for name, _ in bench_data]
+    y = np.arange(len(labels))
+    height = 0.8 / len(engines)
 
-    fig, ax = plt.subplots(figsize=(max(6, len(labels) * 2), 5))
+    fig, ax = plt.subplots(figsize=(10, max(3, len(labels) * 1.5)))
 
-    for i, (engine_label, key) in enumerate(engines):
+    for i, (engine_label, key, color) in enumerate(engines):
         values = [d["summary"].get(key, 0) for _, d in bench_data]
-        offset = (i - len(engines) / 2 + 0.5) * width
-        bars = ax.bar(x + offset, values, width, label=engine_label)
-        # Value labels on bars
+        offset = (i - len(engines) / 2 + 0.5) * height
+        bars = ax.barh(y + offset, values, height, label=engine_label, color=color)
+        # Value labels at end of bars
         for bar, val in zip(bars, values):
             if val > 0:
-                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
-                        f"{val:.1f}x", ha="center", va="bottom", fontsize=8)
+                ax.text(bar.get_width() + ax.get_xlim()[1] * 0.01,
+                        bar.get_y() + bar.get_height() / 2,
+                        f"{val:.0f}ms", ha="left", va="center", fontsize=8)
 
-    ax.axhline(y=1.0, color="gray", linestyle="--", linewidth=0.8, label="1x (parity)")
-    ax.set_xlabel("Pattern")
-    ax.set_ylabel("Speedup (Generated vs Engine)")
-    ax.set_title("Generated C++ Speedup vs Regex Engines")
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, rotation=30, ha="right")
-    ax.legend()
-    ax.set_ylim(bottom=0)
+    ax.set_xlabel("Total Time (ms)")
+    ax.set_title("Total Execution Time by Engine (lower is better)")
+    ax.set_yticks(y)
+    ax.set_yticklabels(labels)
+    ax.legend(loc="lower right")
+    ax.set_xlim(right=ax.get_xlim()[1] * 1.15)  # room for labels
     fig.tight_layout()
 
-    out_path = output_dir / f"speedup_bars.{fmt}"
+    out_path = output_dir / f"timing_bars.{fmt}"
     fig.savefig(out_path, dpi=dpi)
     print(f"Saved: {out_path}")
 
 
 def _plot_throughput_vs_size(bench_data: list[tuple[str, dict]], output_dir: Path,
                              fmt: str, dpi: int):
-    """Scatter+line: throughput (codepoints/ms) vs input size for each engine."""
+    """Throughput vs input size: median line with IQR band, bucketed by size."""
     import matplotlib.pyplot as plt
+    import numpy as np
 
     engine_configs = [
-        ("Generated", "generated", "o", "tab:blue"),
-        ("STL", "stl_regex", "s", "tab:orange"),
-        ("Boost", "boost_regex", "^", "tab:green"),
-        ("PCRE2", "pcre2", "D", "tab:red"),
+        ("Generated", "generated", "tab:blue"),
+        ("PCRE2 (JIT)", "pcre2", "tab:red"),
+        ("Boost", "boost_regex", "tab:green"),
+        ("STL", "stl_regex", "tab:orange"),
     ]
 
     # Collect all (size, throughput) points per engine across all files
@@ -501,51 +501,70 @@ def _plot_throughput_vs_size(bench_data: list[tuple[str, dict]], output_dir: Pat
     for _, data in bench_data:
         iterations = data.get("iterations", 1)
         for r in data.get("results", []):
-            # Get input size in codepoints (fallback: byte length of input string)
             size_cp = r.get("input_length_codepoints")
             if size_cp is None:
                 size_cp = len(r.get("input", ""))
             if size_cp == 0:
                 continue
 
-            for label, key, _, _ in engine_configs:
+            for label, key, _ in engine_configs:
                 engine = r.get(key, {})
                 if not engine.get("success", False):
                     continue
                 time_ms = engine.get("time_ms", 0)
                 if time_ms <= 0:
                     continue
-                # throughput = codepoints per ms (averaged over iterations)
                 throughput = (size_cp * iterations) / time_ms
                 series[label].append((size_cp, throughput))
 
-    # Only plot engines that have data
     has_data = {label for label, pts in series.items() if pts}
     if not has_data:
         print("Warning: No throughput data found, skipping throughput chart")
         return
 
-    fig, ax = plt.subplots(figsize=(8, 5))
+    # Create log-spaced bins for bucketing
+    all_sizes = []
+    for pts in series.values():
+        all_sizes.extend(s for s, _ in pts)
+    if not all_sizes:
+        return
+    bin_edges = np.logspace(np.log10(max(1, min(all_sizes))),
+                            np.log10(max(all_sizes)), 20)
 
-    sizes_all = []
-    for label, key, marker, color in engine_configs:
+    fig, ax = plt.subplots(figsize=(9, 5))
+
+    for label, key, color in engine_configs:
         pts = series[label]
         if not pts:
             continue
-        pts.sort()
-        xs, ys = zip(*pts)
-        sizes_all.extend(xs)
-        ax.plot(xs, ys, marker=marker, color=color, label=label, markersize=5, linewidth=1)
+        sizes = np.array([s for s, _ in pts])
+        thrpts = np.array([t for _, t in pts])
 
-    # Use log x-axis if sizes span >10x
-    if sizes_all:
-        mn, mx = min(sizes_all), max(sizes_all)
-        if mx > mn * 10:
-            ax.set_xscale("log")
+        # Bucket into bins, compute median + IQR
+        bin_indices = np.digitize(sizes, bin_edges)
+        bin_centers, medians, q25s, q75s = [], [], [], []
+        for bi in range(1, len(bin_edges) + 1):
+            mask = bin_indices == bi
+            if mask.sum() < 3:
+                continue
+            bucket = thrpts[mask]
+            center = np.median(sizes[mask])
+            bin_centers.append(center)
+            medians.append(np.median(bucket))
+            q25s.append(np.percentile(bucket, 25))
+            q75s.append(np.percentile(bucket, 75))
 
+        if not bin_centers:
+            continue
+        bc = np.array(bin_centers)
+        med = np.array(medians)
+        ax.plot(bc, med, color=color, label=label, linewidth=2)
+        ax.fill_between(bc, q25s, q75s, alpha=0.15, color=color)
+
+    ax.set_xscale("log")
     ax.set_xlabel("Input Size (codepoints)")
     ax.set_ylabel("Throughput (codepoints / ms)")
-    ax.set_title("Throughput vs Input Size")
+    ax.set_title("Throughput vs Input Size (median with IQR band)")
     ax.legend()
     fig.tight_layout()
 
@@ -593,7 +612,7 @@ def cmd_plot(args) -> int:
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    _plot_speedup_bars(bench_data, output_dir, args.format, args.dpi)
+    _plot_timing_bars(bench_data, output_dir, args.format, args.dpi)
     _plot_throughput_vs_size(bench_data, output_dir, args.format, args.dpi)
 
     if not args.no_show:

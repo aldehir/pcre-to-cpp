@@ -75,7 +75,7 @@ gpt4o     |   6757ms  |  59696ms  | 25654ms |  6898ms |  8.8x  |   3.8x   |  1.0
 
 Zero token mismatches against PCRE2 across all patterns.
 
-![Speedup comparison across patterns](results/charts/speedup_bars.png)
+![Total execution time by engine](results/charts/timing_bars.png)
 
 ![Throughput vs input size](results/charts/throughput_vs_size.png)
 
