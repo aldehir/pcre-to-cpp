@@ -889,8 +889,13 @@ class CppEmitter:
                 std::vector<size_t> bpe_offsets;
                 bpe_offsets.reserve(offsets.size());
 
-                // Convert UTF-8 to codepoints for pattern matching
+                // Convert UTF-8 to codepoints and pre-compute flags for pattern matching
                 const auto cpts = unicode_cpts_from_utf8(text);
+                const size_t n_cpts = cpts.size();
+                std::vector<unicode_cpt_flags> cpt_flags(n_cpts);
+                for (size_t i = 0; i < n_cpts; i++) {
+                    cpt_flags[i] = unicode_cpt_flags_from_cpt(cpts[i]);
+                }
             """)
 
             # Emit shared backtracking stack if needed
@@ -921,12 +926,12 @@ class CppEmitter:
 
                     // Helper: Get codepoint at position (returns OUT_OF_RANGE if outside chunk)
                     auto _get_cpt = [&](const size_t pos) -> uint32_t {
-                        return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
+                        return (pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
                     };
 
-                    // Helper: Get Unicode flags for codepoint at position
+                    // Helper: Get Unicode flags for codepoint at position (pre-computed)
                     auto _get_flags = [&](const size_t pos) -> unicode_cpt_flags {
-                        return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
+                        return (pos < offset_end) ? cpt_flags[pos] : unicode_cpt_flags{};
                     };
 
                     // Helper: Emit a token from _prev_end to 'end'
