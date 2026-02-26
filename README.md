@@ -6,7 +6,6 @@ Converts PCRE regex patterns into standalone C++ functions for LLM pretokenizati
 flowchart TD
     A["PCRE Pattern"] --> B["Recursive Descent Parser"]
     B --> C["AST"]
-    C --> D["AST Optimizer"]
     D --> E["C++ Emitter"]
     E --> F["C++ Function"]
 ```
