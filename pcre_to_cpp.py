@@ -183,10 +183,6 @@ from dataclasses import dataclass
 from string import Template
 from typing import Union, Tuple, Optional
 
-# =============================================================================
-# AST Node Types
-# =============================================================================
-
 
 @dataclass
 class LiteralChar:
@@ -365,11 +361,6 @@ Node = Union[
     Lookahead,
     Anchor,
 ]
-
-
-# =============================================================================
-# Hand-written Recursive Descent Parser
-# =============================================================================
 
 
 class PCREParser:
@@ -756,11 +747,6 @@ def generate_cpp(ast: Node, name: str, pattern: str = "") -> str:
     return CppEmitter(ast, name, pattern).generate()
 
 
-# =============================================================================
-# C++ Code Emitter
-# =============================================================================
-
-
 class CppEmitter:
     """Generates C++ code from a parsed PCRE AST."""
 
@@ -771,10 +757,6 @@ class CppEmitter:
         self.indent_level = 0
         self.lines = []
         self.uses_backtracking = False  # Set by _ast_needs_backtracking()
-
-    # =========================================================================
-    # Emit Infrastructure
-    # =========================================================================
 
     def emit(self, text: str = "", **kwargs):
         """Emit text with current indentation.
@@ -973,12 +955,9 @@ class CppEmitter:
 
                 self.emit("""
 
-                    // =======================================================
-                    // Main matching loop
                     // Try each alternative in order. First match wins.
                     // On match: emit token boundary and continue from new position.
                     // On no match: consume single character as fallback.
-                    // =======================================================
                 """)
                 with self._block("for (size_t pos = offset_ini; pos < offset_end; ) {"):
                     self._generate_match(self.ast)
@@ -1600,11 +1579,6 @@ class CppEmitter:
         code = ord(c)
         escaped = self._escape_char(c)
         return f"U+{code:04X} '{escaped}'"
-
-
-# =============================================================================
-# Main
-# =============================================================================
 
 
 def main():
