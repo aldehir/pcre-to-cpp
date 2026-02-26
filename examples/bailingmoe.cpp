@@ -5,29 +5,40 @@
 //
 //   '(?i:[sdmt]|ll|ve|re)|[^\r\n\p{L}\p{N}]?+\p{L}+|\p{N}| ?[^\s\p{L}\p{N}]++[\r\n]*|\s*[\r\n]|\s+(?!\S)|\s+
 //
-
 #include "unicode.h"
 
 #include <string>
 #include <vector>
 #include <cstdint>
 
+// Macro for match attempts
+#define TRY_MATCH(cond) do {\
+    if (matched) { \
+        if (cond) { match_pos++; } \
+        else { matched = false; } \
+    } } while (0)
+
 /**
- * Split text into tokens using the 'test' pattern.
+ * Split text into tokens using the 'bailingmoe' pattern.
  *
  * @param text     UTF-8 encoded input string
  * @param offsets  Chunk sizes from previous tokenization pass
  * @return         New chunk sizes after applying this pattern
  */
-std::vector<size_t> unicode_regex_split_test(
+std::vector<size_t> unicode_regex_split_bailingmoe(
     const std::string & text,
     const std::vector<size_t> & offsets
 ) {
     std::vector<size_t> bpe_offsets;
     bpe_offsets.reserve(offsets.size());
 
-    // Convert UTF-8 to codepoints for pattern matching
+    // Convert UTF-8 to codepoints and pre-compute flags for pattern matching
     const auto cpts = unicode_cpts_from_utf8(text);
+    const size_t n_cpts = cpts.size();
+    std::vector<unicode_cpt_flags> cpt_flags(n_cpts);
+    for (size_t i = 0; i < n_cpts; i++) {
+        cpt_flags[i] = unicode_cpt_flags_from_cpt(cpts[i]);
+    }
 
     // Pre-allocated backtracking stack for quantifier matching
     // Uses a single vector with base-index tracking to avoid per-match allocations
@@ -47,12 +58,12 @@ std::vector<size_t> unicode_regex_split_test(
 
         // Helper: Get codepoint at position (returns OUT_OF_RANGE if outside chunk)
         auto _get_cpt = [&](const size_t pos) -> uint32_t {
-            return (offset_ini <= pos && pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
+            return (pos < offset_end) ? cpts[pos] : OUT_OF_RANGE;
         };
 
-        // Helper: Get Unicode flags for codepoint at position
+        // Helper: Get Unicode flags for codepoint at position (pre-computed)
         auto _get_flags = [&](const size_t pos) -> unicode_cpt_flags {
-            return (offset_ini <= pos && pos < offset_end) ? unicode_cpt_flags_from_cpt(cpts[pos]) : unicode_cpt_flags{};
+            return (pos < offset_end) ? cpt_flags[pos] : unicode_cpt_flags{};
         };
 
         // Helper: Emit a token from _prev_end to 'end'
@@ -66,18 +77,6 @@ std::vector<size_t> unicode_regex_split_test(
             return len;
         };
 
-        // Helper: Try to match at current position using predicate
-        // Returns true and advances mpos if condition is met
-        auto _try_match = [&](size_t& mpos, bool& mflag, auto condition) -> bool {
-            if (!mflag) return false;
-            if (condition()) {
-                mpos++;
-                return true;
-            }
-            mflag = false;
-            return false;
-        };
-
         // Stack helpers for backtracking
         auto _stack_mark = [&]() -> size_t { return stack.size(); };
         auto _stack_push = [&](size_t p) { stack.push_back(p); };
@@ -85,19 +84,16 @@ std::vector<size_t> unicode_regex_split_test(
         auto _stack_get = [&](size_t base, size_t idx) -> size_t { return stack[base + idx - 1]; };
         auto _stack_restore = [&](size_t base) { stack.resize(base); };
 
-        // =======================================================
-        // Main matching loop
         // Try each alternative in order. First match wins.
         // On match: emit token boundary and continue from new position.
         // On no match: consume single character as fallback.
-        // =======================================================
         for (size_t pos = offset_ini; pos < offset_end; ) {
 
             // Alternative: '(?i:[sdmt]|ll|ve|re)
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 39; }); // U+0027 '\''
+                TRY_MATCH(_get_cpt(match_pos) == 39); // U+0027 '\''
 
                 // Case-insensitive group
 
@@ -107,18 +103,19 @@ std::vector<size_t> unicode_regex_split_test(
                     bool alt_matched = false;
 
                     // [sdmt] (case-insensitive)
-                    _try_match(match_pos, matched, [&]{
+                    if (matched) {
                         uint32_t c = _get_cpt(match_pos);
-                        return unicode_tolower(c) == 115 || unicode_tolower(c) == 100 || unicode_tolower(c) == 109 || unicode_tolower(c) == 116;
-                    });
+                        matched = (unicode_tolower(c) == 115 || unicode_tolower(c) == 100 || unicode_tolower(c) == 109 || unicode_tolower(c) == 116);
+                        if (matched) { match_pos++; }
+                    }
 
                     alt_matched |= matched;
 
                     if (!alt_matched) {
                         match_pos = alt_save;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 108; }); // U+006C 'l' (case-insensitive)
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 108; }); // U+006C 'l' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 108); // U+006C 'l' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 108); // U+006C 'l' (case-insensitive)
 
                         alt_matched |= matched;
                     }
@@ -126,8 +123,8 @@ std::vector<size_t> unicode_regex_split_test(
                     if (!alt_matched) {
                         match_pos = alt_save;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 118; }); // U+0076 'v' (case-insensitive)
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 101; }); // U+0065 'e' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 118); // U+0076 'v' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 101); // U+0065 'e' (case-insensitive)
 
                         alt_matched |= matched;
                     }
@@ -135,8 +132,8 @@ std::vector<size_t> unicode_regex_split_test(
                     if (!alt_matched) {
                         match_pos = alt_save;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 114; }); // U+0072 'r' (case-insensitive)
-                        _try_match(match_pos, matched, [&]{ return unicode_tolower(_get_cpt(match_pos)) == 101; }); // U+0065 'e' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 114); // U+0072 'r' (case-insensitive)
+                        TRY_MATCH(unicode_tolower(_get_cpt(match_pos)) == 101); // U+0065 'e' (case-insensitive)
 
                         alt_matched |= matched;
                     }
@@ -161,11 +158,12 @@ std::vector<size_t> unicode_regex_split_test(
                     bool save_matched = matched;
 
                     // [^\r\n\p{L}\p{N}]
-                    _try_match(match_pos, matched, [&]{
+                    if (matched) {
                         uint32_t c = _get_cpt(match_pos);
                         auto f = _get_flags(match_pos);
-                        return c != OUT_OF_RANGE && !(c == 13 || c == 10 || f.is_letter || f.is_number);
-                    });
+                        matched = (c != OUT_OF_RANGE && !(c == 13 || c == 10 || f.is_letter || f.is_number));
+                        if (matched) { match_pos++; }
+                    }
                     if (!matched) {
                         match_pos = save_pos;
                         matched = save_matched;
@@ -177,10 +175,10 @@ std::vector<size_t> unicode_regex_split_test(
                     size_t count = 0;
                     while (matched) {
                         size_t save_pos = match_pos;
-                        _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_letter; }); // \p{L}
+                        TRY_MATCH(_get_flags(match_pos).is_letter); // \p{L}
                         if (!matched || match_pos == save_pos) {
                             match_pos = save_pos;
-                            matched = (count > 0);
+                            matched = (count >= 1);
                             break;
                         }
                         count++;
@@ -197,7 +195,7 @@ std::vector<size_t> unicode_regex_split_test(
             {
                 size_t match_pos = pos;
                 bool matched = true;
-                _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_number; }); // \p{N}
+                TRY_MATCH(_get_flags(match_pos).is_number); // \p{N}
                 if (matched && match_pos > pos) {
                     pos = match_pos;
                     _add_token(pos);
@@ -222,7 +220,7 @@ std::vector<size_t> unicode_regex_split_test(
                     while (_stack_count(q0_base) <= 1) {
                         size_t save_pos = match_pos;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return _get_cpt(match_pos) == 32; }); // U+0020 ' '
+                        TRY_MATCH(_get_cpt(match_pos) == 32); // U+0020 ' '
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -245,14 +243,15 @@ std::vector<size_t> unicode_regex_split_test(
                                 size_t save_pos = match_pos;
 
                                 // [^\s\p{L}\p{N}]
-                                _try_match(match_pos, matched, [&]{
+                                if (matched) {
                                     uint32_t c = _get_cpt(match_pos);
                                     auto f = _get_flags(match_pos);
-                                    return c != OUT_OF_RANGE && !(f.is_whitespace || f.is_letter || f.is_number);
-                                });
+                                    matched = (c != OUT_OF_RANGE && !(f.is_whitespace || f.is_letter || f.is_number));
+                                    if (matched) { match_pos++; }
+                                }
                                 if (!matched || match_pos == save_pos) {
                                     match_pos = save_pos;
-                                    matched = (count > 0);
+                                    matched = (count >= 1);
                                     break;
                                 }
                                 count++;
@@ -260,36 +259,30 @@ std::vector<size_t> unicode_regex_split_test(
                         }
                         if (!matched) continue;
 
-
-                        // Quantifier 1: [\r\n]*
+                        // Quantifier 1: [\r\n]* (terminal)
                         size_t q1_base = _stack_mark();
-                        _stack_push(match_pos);
 
-                        while (true) {
-                            size_t save_pos = match_pos;
-                            matched = true;
+                        // Zero or more
+                        {
+                            size_t count = 0;
+                            while (matched) {
+                                size_t save_pos = match_pos;
 
-                            // [\r\n]
-                            _try_match(match_pos, matched, [&]{
-                                uint32_t c = _get_cpt(match_pos);
-                                return c == 13 || c == 10;
-                            });
-                            if (matched && match_pos > save_pos) {
-                                _stack_push(match_pos);
-                            } else {
-                                match_pos = save_pos;
-                                break;
+                                // [\r\n]
+                                if (matched) {
+                                    uint32_t c = _get_cpt(match_pos);
+                                    matched = (c == 13 || c == 10);
+                                    if (matched) { match_pos++; }
+                                }
+                                if (!matched || match_pos == save_pos) {
+                                    match_pos = save_pos;
+                                    matched = true;
+                                    break;
+                                }
+                                count++;
                             }
                         }
-
-                        size_t q1_count = _stack_count(q1_base);
-
-                        // Try quantifier 1 positions longest-first (greedy, min_count=0)
-                        for (size_t i1 = q1_count; i1 > 0; i1--) {
-                            match_pos = _stack_get(q1_base, i1);
-                            matched = true;
-                            if (matched) { seq_matched = true; break; }
-                        }
+                        if (matched) { seq_matched = true; }
 
                         _stack_restore(q1_base);
                         if (seq_matched) break;
@@ -322,7 +315,7 @@ std::vector<size_t> unicode_regex_split_test(
                     while (true) {
                         size_t save_pos = match_pos;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
+                        TRY_MATCH(_get_flags(match_pos).is_whitespace); // \s
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -339,13 +332,14 @@ std::vector<size_t> unicode_regex_split_test(
                         matched = true;
 
                         // [\r\n]
-                        _try_match(match_pos, matched, [&]{
+                        if (matched) {
                             uint32_t c = _get_cpt(match_pos);
-                            return c == 13 || c == 10;
-                        });
+                            matched = (c == 13 || c == 10);
+                            if (matched) { match_pos++; }
+                        }
                         if (!matched) continue;
 
-                        if (matched) { seq_matched = true; break; }
+                        seq_matched = true; break;
                     }
 
                     _stack_restore(bt_base);  // Restore stack state
@@ -375,7 +369,7 @@ std::vector<size_t> unicode_regex_split_test(
                     while (true) {
                         size_t save_pos = match_pos;
                         matched = true;
-                        _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
+                        TRY_MATCH(_get_flags(match_pos).is_whitespace); // \s
                         if (matched && match_pos > save_pos) {
                             _stack_push(match_pos);
                         } else {
@@ -395,14 +389,14 @@ std::vector<size_t> unicode_regex_split_test(
                         {
                             size_t save_match_pos = match_pos;
                             bool save_matched = matched;
-                            _try_match(match_pos, matched, [&]{ return (!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint()); }); // \S
+                            TRY_MATCH((!_get_flags(match_pos).is_whitespace && _get_flags(match_pos).as_uint())); // \S
                             bool lookahead_success = matched;
                             match_pos = save_match_pos;
                             matched = save_matched && !lookahead_success;
                         }
                         if (!matched) continue;
 
-                        if (matched) { seq_matched = true; break; }
+                        seq_matched = true; break;
                     }
 
                     _stack_restore(bt_base);  // Restore stack state
@@ -425,10 +419,10 @@ std::vector<size_t> unicode_regex_split_test(
                     size_t count = 0;
                     while (matched) {
                         size_t save_pos = match_pos;
-                        _try_match(match_pos, matched, [&]{ return _get_flags(match_pos).is_whitespace; }); // \s
+                        TRY_MATCH(_get_flags(match_pos).is_whitespace); // \s
                         if (!matched || match_pos == save_pos) {
                             match_pos = save_pos;
-                            matched = (count > 0);
+                            matched = (count >= 1);
                             break;
                         }
                         count++;
