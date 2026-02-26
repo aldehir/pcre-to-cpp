@@ -15,3 +15,6 @@ test-harness/builds/
 # Generated code (keep directory, ignore contents)
 test-harness/generated/**/*.cpp
 test-harness/generated/**/*.h
+
+# Benchmark result JSON files (large)
+results/*.json

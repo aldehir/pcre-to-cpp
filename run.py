@@ -431,6 +431,178 @@ _MODE_DEFAULTS = {
 }
 
 
+def _plot_speedup_bars(bench_data: list[tuple[str, dict]], output_dir: Path,
+                       fmt: str, dpi: int):
+    """Grouped bar chart of speedup factors per pattern."""
+    import matplotlib.pyplot as plt
+    import numpy as np
+
+    engines = []
+    engine_keys = [
+        ("STL", "average_speedup_vs_stl"),
+        ("Boost", "average_speedup_vs_boost"),
+        ("PCRE2", "average_speedup_vs_pcre2"),
+    ]
+    # Only include engines that have non-zero speedup in at least one file
+    for label, key in engine_keys:
+        if any(d["summary"].get(key, 0) > 0 for _, d in bench_data):
+            engines.append((label, key))
+
+    if not engines:
+        print("Warning: No speedup data found, skipping speedup chart")
+        return
+
+    labels = [name for name, _ in bench_data]
+    x = np.arange(len(labels))
+    width = 0.8 / len(engines)
+
+    fig, ax = plt.subplots(figsize=(max(6, len(labels) * 2), 5))
+
+    for i, (engine_label, key) in enumerate(engines):
+        values = [d["summary"].get(key, 0) for _, d in bench_data]
+        offset = (i - len(engines) / 2 + 0.5) * width
+        bars = ax.bar(x + offset, values, width, label=engine_label)
+        # Value labels on bars
+        for bar, val in zip(bars, values):
+            if val > 0:
+                ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.1,
+                        f"{val:.1f}x", ha="center", va="bottom", fontsize=8)
+
+    ax.axhline(y=1.0, color="gray", linestyle="--", linewidth=0.8, label="1x (parity)")
+    ax.set_xlabel("Pattern")
+    ax.set_ylabel("Speedup (Generated vs Engine)")
+    ax.set_title("Generated C++ Speedup vs Regex Engines")
+    ax.set_xticks(x)
+    ax.set_xticklabels(labels, rotation=30, ha="right")
+    ax.legend()
+    ax.set_ylim(bottom=0)
+    fig.tight_layout()
+
+    out_path = output_dir / f"speedup_bars.{fmt}"
+    fig.savefig(out_path, dpi=dpi)
+    print(f"Saved: {out_path}")
+
+
+def _plot_throughput_vs_size(bench_data: list[tuple[str, dict]], output_dir: Path,
+                             fmt: str, dpi: int):
+    """Scatter+line: throughput (codepoints/ms) vs input size for each engine."""
+    import matplotlib.pyplot as plt
+
+    engine_configs = [
+        ("Generated", "generated", "o", "tab:blue"),
+        ("STL", "stl_regex", "s", "tab:orange"),
+        ("Boost", "boost_regex", "^", "tab:green"),
+        ("PCRE2", "pcre2", "D", "tab:red"),
+    ]
+
+    # Collect all (size, throughput) points per engine across all files
+    series: dict[str, list[tuple[float, float]]] = {label: [] for label, *_ in engine_configs}
+
+    for _, data in bench_data:
+        iterations = data.get("iterations", 1)
+        for r in data.get("results", []):
+            # Get input size in codepoints (fallback: byte length of input string)
+            size_cp = r.get("input_length_codepoints")
+            if size_cp is None:
+                size_cp = len(r.get("input", ""))
+            if size_cp == 0:
+                continue
+
+            for label, key, _, _ in engine_configs:
+                engine = r.get(key, {})
+                if not engine.get("success", False):
+                    continue
+                time_ms = engine.get("time_ms", 0)
+                if time_ms <= 0:
+                    continue
+                # throughput = codepoints per ms (averaged over iterations)
+                throughput = (size_cp * iterations) / time_ms
+                series[label].append((size_cp, throughput))
+
+    # Only plot engines that have data
+    has_data = {label for label, pts in series.items() if pts}
+    if not has_data:
+        print("Warning: No throughput data found, skipping throughput chart")
+        return
+
+    fig, ax = plt.subplots(figsize=(8, 5))
+
+    sizes_all = []
+    for label, key, marker, color in engine_configs:
+        pts = series[label]
+        if not pts:
+            continue
+        pts.sort()
+        xs, ys = zip(*pts)
+        sizes_all.extend(xs)
+        ax.plot(xs, ys, marker=marker, color=color, label=label, markersize=5, linewidth=1)
+
+    # Use log x-axis if sizes span >10x
+    if sizes_all:
+        mn, mx = min(sizes_all), max(sizes_all)
+        if mx > mn * 10:
+            ax.set_xscale("log")
+
+    ax.set_xlabel("Input Size (codepoints)")
+    ax.set_ylabel("Throughput (codepoints / ms)")
+    ax.set_title("Throughput vs Input Size")
+    ax.legend()
+    fig.tight_layout()
+
+    out_path = output_dir / f"throughput_vs_size.{fmt}"
+    fig.savefig(out_path, dpi=dpi)
+    print(f"Saved: {out_path}")
+
+
+def cmd_plot(args) -> int:
+    """Generate charts from benchmark JSON result files."""
+    try:
+        import matplotlib
+        matplotlib.use("Agg")  # non-interactive backend by default
+    except ImportError:
+        print("Error: matplotlib is required for plotting. Install with: pip install matplotlib",
+              file=sys.stderr)
+        return 1
+
+    # Load and filter bench results
+    bench_data: list[tuple[str, dict]] = []
+    for filepath in args.files:
+        p = Path(filepath)
+        if not p.exists():
+            print(f"Warning: File not found, skipping: {p}", file=sys.stderr)
+            continue
+        try:
+            with open(p, encoding="utf-8") as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, OSError) as e:
+            print(f"Warning: Could not read {p}: {e}", file=sys.stderr)
+            continue
+
+        if data.get("mode") != "bench":
+            print(f"Skipping non-bench file: {p.name} (mode={data.get('mode', '?')})")
+            continue
+
+        bench_data.append((p.stem, data))
+
+    if not bench_data:
+        print("Error: No benchmark JSON files found", file=sys.stderr)
+        return 1
+
+    print(f"Loaded {len(bench_data)} benchmark file(s): {', '.join(n for n, _ in bench_data)}")
+
+    output_dir = Path(args.output_dir)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    _plot_speedup_bars(bench_data, output_dir, args.format, args.dpi)
+    _plot_throughput_vs_size(bench_data, output_dir, args.format, args.dpi)
+
+    if not args.no_show:
+        import matplotlib.pyplot as plt
+        plt.show()
+
+    return 0
+
+
 def cmd_run(args, mode: str):
     """Run tests or benchmarks for all configured patterns."""
     config = load_config(Path(args.config))
@@ -508,6 +680,7 @@ def main():
 Commands:
   test    Run correctness tests (generated vs PCRE2)
   bench   Run performance benchmarks (generated vs STL vs PCRE2)
+  plot    Generate charts from benchmark JSON results
 
 Examples:
   python run.py test                    # Run all tests
@@ -516,6 +689,7 @@ Examples:
   python run.py bench --iterations 100  # More iterations
   python run.py bench -o results/       # Save JSON results
   python run.py bench --rebuild         # Force full rebuild (no incremental)
+  python run.py plot results/*.json -d results/charts/  # Generate charts
 """
     )
 
@@ -541,6 +715,16 @@ Examples:
     bench_parser = subparsers.add_parser("bench", help="Run performance benchmarks")
     add_common_args(bench_parser)
     bench_parser.set_defaults(func=lambda args: cmd_run(args, "bench"))
+
+    # Plot subcommand
+    plot_parser = subparsers.add_parser("plot", help="Generate charts from benchmark JSON results")
+    plot_parser.add_argument("files", nargs="+", help="JSON result files from bench runs")
+    plot_parser.add_argument("--output-dir", "-d", default=".", help="Directory to save charts (default: .)")
+    plot_parser.add_argument("--format", "-f", default="png", choices=["png", "svg", "pdf"],
+                             help="Output image format (default: png)")
+    plot_parser.add_argument("--dpi", type=int, default=150, help="Image DPI (default: 150)")
+    plot_parser.add_argument("--no-show", action="store_true", help="Skip plt.show() (headless)")
+    plot_parser.set_defaults(func=cmd_plot)
 
     args = parser.parse_args()
 

@@ -27,15 +27,30 @@
 
 using json = nlohmann::json;
 
-// Helper: measure execution time over multiple iterations
+// Timing result: total time + per-iteration breakdown
+struct TimingResult {
+    double total_ms;
+    std::vector<double> iteration_times_ms;
+};
+
+// Helper: measure execution time over multiple iterations (with per-iteration timing)
 template<typename F>
-double measure_time_ms(int iterations, F&& func) {
-    auto start = std::chrono::high_resolution_clock::now();
+TimingResult measure_time_ms(int iterations, F&& func) {
+    TimingResult result;
+    result.iteration_times_ms.reserve(iterations);
+
+    auto outer_start = std::chrono::high_resolution_clock::now();
     for (int i = 0; i < iterations; i++) {
+        auto iter_start = std::chrono::high_resolution_clock::now();
         func();
+        auto iter_end = std::chrono::high_resolution_clock::now();
+        result.iteration_times_ms.push_back(
+            std::chrono::duration<double, std::milli>(iter_end - iter_start).count());
     }
-    auto end = std::chrono::high_resolution_clock::now();
-    return std::chrono::duration<double, std::milli>(end - start).count();
+    auto outer_end = std::chrono::high_resolution_clock::now();
+    result.total_ms = std::chrono::duration<double, std::milli>(outer_end - outer_start).count();
+
+    return result;
 }
 
 // Helper: calculate speedup ratio
@@ -273,6 +288,7 @@ struct TokenDiff {
 struct EngineResult {
     std::vector<std::string> tokens;
     double time_ms = 0.0;
+    std::vector<double> iteration_times_ms;  // per-iteration timing breakdown
     bool success = true;
     std::string error;
     double speedup = 1.0;           // speedup vs generated (generated is always 1.0)
@@ -283,6 +299,8 @@ struct EngineResult {
 // Result structure for a single test string
 struct TestResult {
     std::string input;
+    size_t input_length_bytes = 0;
+    size_t input_length_codepoints = 0;
     EngineResult generated;
     EngineResult stl;
     EngineResult boost;
@@ -316,19 +334,25 @@ TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
                            const std::string & text, int iterations, bool is_test_mode) {
     TestResult result;
     result.input = text;
+    result.input_length_bytes = text.size();
+
+    // Hoist codepoint conversion — reuse for input length and generated code
+    auto cpts = unicode_cpts_from_utf8(text);
+    result.input_length_codepoints = cpts.size();
 
     // Run generated code (baseline - speedup is always 1.0, tokens always match itself)
     {
-        auto cpts = unicode_cpts_from_utf8(text);
         std::vector<size_t> initial_offsets = { cpts.size() };
 
         // Warmup run (also gets tokens)
         result.generated.tokens = offsets_to_tokens(text, unicode_regex_split_test(text, initial_offsets));
 
         // Timed runs
-        result.generated.time_ms = measure_time_ms(iterations, [&]() {
+        auto timing = measure_time_ms(iterations, [&]() {
             volatile auto offsets = unicode_regex_split_test(text, initial_offsets);
         });
+        result.generated.time_ms = timing.total_ms;
+        result.generated.iteration_times_ms = std::move(timing.iteration_times_ms);
         // generated is the baseline: speedup = 1.0, tokens_match = true (defaults)
     }
 
@@ -341,9 +365,11 @@ TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
             result.stl.error = std::move(warmup_result.error);
 
             if (result.stl.success) {
-                result.stl.time_ms = measure_time_ms(iterations, [&]() {
+                auto stl_timing = measure_time_ms(iterations, [&]() {
                     run_stl_regex(*stl_compiled.regex, text, false);
                 });
+                result.stl.time_ms = stl_timing.total_ms;
+                result.stl.iteration_times_ms = std::move(stl_timing.iteration_times_ms);
                 result.stl.speedup = calc_speedup(result.stl.time_ms, result.generated.time_ms, true);
                 result.stl.tokens_match = (result.generated.tokens == result.stl.tokens);
             }
@@ -364,9 +390,11 @@ TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
             result.boost.error = std::move(warmup_result.error);
 
             if (result.boost.success) {
-                result.boost.time_ms = measure_time_ms(iterations, [&]() {
+                auto boost_timing = measure_time_ms(iterations, [&]() {
                     run_boost_regex(*boost_compiled.regex, text, false);
                 });
+                result.boost.time_ms = boost_timing.total_ms;
+                result.boost.iteration_times_ms = std::move(boost_timing.iteration_times_ms);
                 result.boost.speedup = calc_speedup(result.boost.time_ms, result.generated.time_ms, true);
                 result.boost.tokens_match = (result.generated.tokens == result.boost.tokens);
             }
@@ -387,10 +415,12 @@ TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
         result.pcre2.error = std::move(warmup_result.error);
 
         if (result.pcre2.success) {
-            result.pcre2.time_ms = measure_time_ms(iterations, [&]() {
+            auto pcre2_timing = measure_time_ms(iterations, [&]() {
                 run_pcre2_regex(pcre2_compiled.regex, pcre2_compiled.match_data,
                                 pcre2_compiled.jit_available, text, false);
             });
+            result.pcre2.time_ms = pcre2_timing.total_ms;
+            result.pcre2.iteration_times_ms = std::move(pcre2_timing.iteration_times_ms);
             result.pcre2.speedup = calc_speedup(result.pcre2.time_ms, result.generated.time_ms, true);
 
             // Calculate token match and diffs
@@ -432,6 +462,7 @@ json make_engine_json(const EngineResult & e) {
     json result = {
         {"tokens", e.tokens},
         {"time_ms", e.time_ms},
+        {"iteration_times_ms", e.iteration_times_ms},
         {"success", e.success},
         {"error", e.success ? json(nullptr) : json(e.error)},
         {"speedup", e.speedup},
@@ -659,6 +690,8 @@ int run() {
     for (const auto & r : results) {
         results_json.push_back({
             {"input", r.input},
+            {"input_length_bytes", r.input_length_bytes},
+            {"input_length_codepoints", r.input_length_codepoints},
             {"generated", make_engine_json(r.generated)},
             {"stl_regex", make_engine_json(r.stl)},
             {"boost_regex", make_engine_json(r.boost)},

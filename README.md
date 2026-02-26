@@ -42,9 +42,22 @@ python run.py bench                     # all patterns
 python run.py bench -n gpt2             # single pattern
 python run.py bench --iterations 100    # more iterations (default: 50)
 python run.py bench --rebuild           # force full rebuild
+python run.py bench -o results/         # save JSON results
 ```
 
 Requires: `g++`, `libpcre2-dev`, `libboost-regex-dev`, `pyyaml`, `datasets`.
+
+## Plotting Results
+
+Generate charts from saved benchmark JSON files:
+
+```bash
+python run.py plot results/*.json -d results/charts/          # PNG (default)
+python run.py plot results/*.json -d results/charts/ -f svg   # SVG
+python run.py plot results/*.json --no-show                   # headless
+```
+
+Requires: `matplotlib`.
 
 ## Benchmark Results
 
@@ -55,12 +68,16 @@ support Unicode properties.
 ```
 Pattern   | Generated | STL Regex |  Boost  |  PCRE2  | vs STL | vs Boost | vs PCRE2
 ----------|-----------|-----------|---------|---------|--------|----------|--------
-gpt2      |   5744ms  |  55700ms  | 33970ms |  7367ms |  9.7x  |   5.9x   |  1.3x
-llama3    |   4107ms  |  78074ms  | 39887ms |  5457ms | 19.0x  |   9.7x   |  1.3x
-gpt4o     |   7507ms  |  62673ms  | 27446ms |  7185ms |  8.3x  |   3.7x   |  1.0x
+gpt2      |   5412ms  |  50295ms  | 29309ms |  6231ms |  9.3x  |   5.4x   |  1.2x
+llama3    |   4587ms  |  91146ms  | 50187ms |  6165ms | 19.9x  |  10.9x   |  1.3x
+gpt4o     |   6757ms  |  59696ms  | 25654ms |  6898ms |  8.8x  |   3.8x   |  1.0x
 ```
 
 Zero token mismatches against PCRE2 across all patterns.
+
+![Speedup comparison across patterns](results/charts/speedup_bars.png)
+
+![Throughput vs input size](results/charts/throughput_vs_size.png)
 
 ## Documentation
 
