@@ -309,10 +309,16 @@ def print_summary(results: dict, name: str, mode: str):
     else:
         print(f"Total Generated C++ time:  {summary.get('total_generated_ms', 0):.3f}ms")
         print(f"Total STL Regex time:      {summary.get('total_stl_ms', 0):.3f}ms")
+        if summary.get('total_boost_ms', 0) > 0:
+            print(f"Total Boost Regex time:    {summary.get('total_boost_ms', 0):.3f}ms")
         print(f"Total PCRE2 time:          {summary.get('total_pcre2_ms', 0):.3f}ms")
         print(f"Speedup vs STL:            {summary.get('average_speedup_vs_stl', 0):.1f}x")
+        if summary.get('average_speedup_vs_boost', 0) > 0:
+            print(f"Speedup vs Boost:          {summary.get('average_speedup_vs_boost', 0):.1f}x")
         print(f"Speedup vs PCRE2:          {summary.get('average_speedup_vs_pcre2', 0):.1f}x")
         print(f"STL Regex failures:        {summary.get('stl_failures', 0)}")
+        if summary.get('boost_failures', 0) > 0:
+            print(f"Boost Regex failures:      {summary.get('boost_failures', 0)}")
         print(f"PCRE2 failures:            {summary.get('pcre2_failures', 0)}")
         print(f"Token mismatches vs PCRE2: {summary.get('token_mismatches', 0)}")
 

@@ -21,6 +21,10 @@
 #include "unicode.h"
 #include <pcre2.h>
 
+#ifdef HAS_BOOST_REGEX
+#include <boost/regex.hpp>
+#endif
+
 using json = nlohmann::json;
 
 // Helper: measure execution time over multiple iterations
@@ -114,6 +118,52 @@ StlRegexCompileResult compile_stl_regex(const std::string & pattern) {
 
     return result;
 }
+
+// Boost.Regex support (optional, for benchmarking)
+#ifdef HAS_BOOST_REGEX
+struct BoostRegexCompileResult {
+    std::unique_ptr<boost::regex> regex;
+    bool success;
+    std::string error;
+};
+
+BoostRegexCompileResult compile_boost_regex(const std::string & pattern) {
+    BoostRegexCompileResult result;
+    result.success = true;
+
+    try {
+        result.regex = std::make_unique<boost::regex>(pattern, boost::regex::perl | boost::regex::nosubs | boost::regex::optimize);
+    }
+    catch (const std::exception & e) {
+        result.success = false;
+        result.error = e.what();
+    }
+
+    return result;
+}
+
+RegexResult run_boost_regex(const boost::regex & re, const std::string & text, bool collect_tokens = true) {
+    RegexResult result;
+
+    try {
+        boost::sregex_iterator iter(text.begin(), text.end(), re);
+        boost::sregex_iterator end;
+
+        while (iter != end) {
+            if (collect_tokens) {
+                result.tokens.push_back(iter->str());
+            }
+            ++iter;
+        }
+    }
+    catch (const std::exception & e) {
+        result.success = false;
+        result.error = e.what();
+    }
+
+    return result;
+}
+#endif
 
 // PCRE2 compile result structure with RAII cleanup
 struct Pcre2CompileResult {
@@ -235,6 +285,7 @@ struct TestResult {
     std::string input;
     EngineResult generated;
     EngineResult stl;
+    EngineResult boost;
     EngineResult pcre2;
 };
 
@@ -258,6 +309,9 @@ std::vector<TokenDiff> calculate_token_diffs(const std::vector<std::string> & ex
 
 // Run test/benchmark on a single string with precompiled regexes
 TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
+#ifdef HAS_BOOST_REGEX
+                           const BoostRegexCompileResult & boost_compiled,
+#endif
                            const Pcre2CompileResult & pcre2_compiled,
                            const std::string & text, int iterations, bool is_test_mode) {
     TestResult result;
@@ -299,6 +353,30 @@ TestResult run_single_test(const StlRegexCompileResult & stl_compiled,
             result.stl.tokens_match = false;
         }
     }
+
+    // Run Boost.Regex (precompiled) - skip in test mode
+#ifdef HAS_BOOST_REGEX
+    if (!is_test_mode) {
+        if (boost_compiled.regex) {
+            auto warmup_result = run_boost_regex(*boost_compiled.regex, text);
+            result.boost.tokens = std::move(warmup_result.tokens);
+            result.boost.success = warmup_result.success;
+            result.boost.error = std::move(warmup_result.error);
+
+            if (result.boost.success) {
+                result.boost.time_ms = measure_time_ms(iterations, [&]() {
+                    run_boost_regex(*boost_compiled.regex, text, false);
+                });
+                result.boost.speedup = calc_speedup(result.boost.time_ms, result.generated.time_ms, true);
+                result.boost.tokens_match = (result.generated.tokens == result.boost.tokens);
+            }
+        } else {
+            result.boost.success = false;
+            result.boost.error = boost_compiled.error;
+            result.boost.tokens_match = false;
+        }
+    }
+#endif
 
     // Run PCRE2 (precompiled)
     if (pcre2_compiled.regex) {
@@ -405,10 +483,16 @@ int run() {
 
     bool is_test_mode = (mode == "test");
 
-    // Precompile regexes (skip STL in test mode - we only compare against PCRE2)
+    // Precompile regexes (skip STL/Boost in test mode - we only compare against PCRE2)
     StlRegexCompileResult stl_compile_result;
+#ifdef HAS_BOOST_REGEX
+    BoostRegexCompileResult boost_compile_result;
+#endif
     if (!is_test_mode) {
         stl_compile_result = compile_stl_regex(stl_pattern);
+#ifdef HAS_BOOST_REGEX
+        boost_compile_result = compile_boost_regex(stl_pattern);
+#endif
     }
     auto pcre2_compile_result = compile_pcre2_regex(pcre_pattern);
 
@@ -434,6 +518,13 @@ int run() {
         } else {
             std::cerr << "STL Regex compile:   OK" << std::endl;
         }
+#ifdef HAS_BOOST_REGEX
+        if (!boost_compile_result.success) {
+            std::cerr << "Boost Regex compile: FAILED - " << boost_compile_result.error << std::endl;
+        } else {
+            std::cerr << "Boost Regex compile: OK" << std::endl;
+        }
+#endif
     }
     if (!pcre2_compile_result.success) {
         std::cerr << "PCRE2 Regex compile: FAILED - " << pcre2_compile_result.error << std::endl;
@@ -446,7 +537,11 @@ int run() {
     for (size_t i = 0; i < test_strings.size(); i++) {
         const std::string & text = test_strings[i];
         auto result = run_single_test(
-            stl_compile_result, pcre2_compile_result,
+            stl_compile_result,
+#ifdef HAS_BOOST_REGEX
+            boost_compile_result,
+#endif
+            pcre2_compile_result,
             text, iterations, is_test_mode);
         results.push_back(result);
 
@@ -478,8 +573,11 @@ int run() {
             std::cerr << "Test " << (i + 1) << ": \"" << escape_for_display(text) << "\"" << std::endl;
             std::cerr << "  Generated: " << std::fixed << std::setprecision(3)
                       << result.generated.time_ms << "ms (" << result.generated.tokens.size() << " tokens)" << std::endl;
-            print_engine_result("STL Regex", result.stl);
-            print_engine_result("PCRE2    ", result.pcre2);
+            print_engine_result("STL Regex  ", result.stl);
+#ifdef HAS_BOOST_REGEX
+            print_engine_result("Boost Regex", result.boost);
+#endif
+            print_engine_result("PCRE2      ", result.pcre2);
 
             if (!result.pcre2.tokens_match) {
                 std::cerr << "  WARNING: Token mismatch vs PCRE2!" << std::endl;
@@ -489,10 +587,10 @@ int run() {
     }
 
     // Compute summary statistics from results
-    double total_generated_ms = 0.0, total_stl_ms = 0.0, total_pcre2_ms = 0.0;
-    double speedup_stl_sum = 0.0, speedup_pcre2_sum = 0.0;
-    int stl_failures = 0, pcre2_failures = 0;
-    int speedup_stl_count = 0, speedup_pcre2_count = 0;
+    double total_generated_ms = 0.0, total_stl_ms = 0.0, total_boost_ms = 0.0, total_pcre2_ms = 0.0;
+    double speedup_stl_sum = 0.0, speedup_boost_sum = 0.0, speedup_pcre2_sum = 0.0;
+    int stl_failures = 0, boost_failures = 0, pcre2_failures = 0;
+    int speedup_stl_count = 0, speedup_boost_count = 0, speedup_pcre2_count = 0;
     int token_mismatches = 0;
 
     for (const auto & r : results) {
@@ -505,6 +603,13 @@ int run() {
         } else if (!is_test_mode) {
             stl_failures++;
         }
+        if (r.boost.success && r.boost.time_ms > 0) {
+            total_boost_ms += r.boost.time_ms;
+            speedup_boost_sum += r.boost.speedup;
+            speedup_boost_count++;
+        } else if (!is_test_mode && r.boost.error.size() > 0) {
+            boost_failures++;
+        }
         if (r.pcre2.success) {
             total_pcre2_ms += r.pcre2.time_ms;
             speedup_pcre2_sum += r.pcre2.speedup;
@@ -515,6 +620,7 @@ int run() {
     }
 
     double average_speedup_stl = speedup_stl_count > 0 ? speedup_stl_sum / speedup_stl_count : 0.0;
+    double average_speedup_boost = speedup_boost_count > 0 ? speedup_boost_sum / speedup_boost_count : 0.0;
     double average_speedup_pcre2 = speedup_pcre2_count > 0 ? speedup_pcre2_sum / speedup_pcre2_count : 0.0;
 
     // Print summary to stderr
@@ -533,12 +639,20 @@ int run() {
         std::cerr << "Total STL:       " << total_stl_ms << "ms";
         if (stl_failures > 0) std::cerr << " (" << stl_failures << " failures)";
         std::cerr << std::endl;
+        if (speedup_boost_count > 0) {
+            std::cerr << "Total Boost:     " << total_boost_ms << "ms";
+            if (boost_failures > 0) std::cerr << " (" << boost_failures << " failures)";
+            std::cerr << std::endl;
+        }
         std::cerr << "Total PCRE2:     " << total_pcre2_ms << "ms";
         if (pcre2_failures > 0) std::cerr << " (" << pcre2_failures << " failures)";
         std::cerr << std::endl;
         std::cerr << std::setprecision(1);
         if (speedup_stl_count > 0) {
             std::cerr << "Speedup vs STL:   " << average_speedup_stl << "x" << std::endl;
+        }
+        if (speedup_boost_count > 0) {
+            std::cerr << "Speedup vs Boost: " << average_speedup_boost << "x" << std::endl;
         }
         if (speedup_pcre2_count > 0) {
             std::cerr << "Speedup vs PCRE2: " << average_speedup_pcre2 << "x" << std::endl;
@@ -555,6 +669,7 @@ int run() {
             {"input", r.input},
             {"generated", make_engine_json(r.generated)},
             {"stl_regex", make_engine_json(r.stl)},
+            {"boost_regex", make_engine_json(r.boost)},
             {"pcre2", make_engine_json(r.pcre2)}
         });
     }
@@ -568,10 +683,13 @@ int run() {
         {"summary", {
             {"total_generated_ms", total_generated_ms},
             {"total_stl_ms", total_stl_ms},
+            {"total_boost_ms", total_boost_ms},
             {"total_pcre2_ms", total_pcre2_ms},
             {"average_speedup_vs_stl", average_speedup_stl},
+            {"average_speedup_vs_boost", average_speedup_boost},
             {"average_speedup_vs_pcre2", average_speedup_pcre2},
             {"stl_failures", stl_failures},
+            {"boost_failures", boost_failures},
             {"pcre2_failures", pcre2_failures},
             {"token_mismatches", token_mismatches},
             {"all_passed", token_mismatches == 0}

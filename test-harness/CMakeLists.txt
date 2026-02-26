@@ -21,6 +21,14 @@ set(PCRE2_SUPPORT_JIT ON CACHE BOOL "" FORCE)
 
 FetchContent_MakeAvailable(pcre2)
 
+# Boost.Regex for benchmarking (optional)
+find_package(Boost COMPONENTS regex)
+if(Boost_FOUND)
+    message(STATUS "Boost.Regex found: ${Boost_VERSION}")
+else()
+    message(STATUS "Boost.Regex not found - boost benchmarks will be disabled")
+endif()
+
 # Generated pattern file - set via cmake -DPATTERN_FILE=...
 set(PATTERN_FILE "generated/pattern_split.cpp" CACHE STRING "Path to generated pattern file")
 
@@ -39,3 +47,8 @@ target_include_directories(runner PRIVATE
 
 target_link_libraries(runner PRIVATE pcre2-8)
 target_compile_definitions(runner PRIVATE PCRE2_CODE_UNIT_WIDTH=8)
+
+if(Boost_FOUND)
+    target_link_libraries(runner PRIVATE Boost::regex)
+    target_compile_definitions(runner PRIVATE HAS_BOOST_REGEX)
+endif()
