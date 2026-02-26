@@ -1128,8 +1128,8 @@ class CppEmitter:
             else:
                 return (False, False, "false")
 
-        # Join conditions with ||
-        combined = " || ".join(conditions)
+        # Deduplicate and join conditions with ||
+        combined = " || ".join(dict.fromkeys(conditions))
 
         if node.negated:
             needs_cpt = True  # Need to check OUT_OF_RANGE
@@ -1420,6 +1420,9 @@ class CppEmitter:
         1. Collect all possible match positions into stack
         2. Loop from longest to shortest (greedy) or shortest to longest (lazy)
         3. Inside the loop, either recurse to next quantifier or try remaining pattern
+
+        Terminal quantifier optimization: when the last quantifier has nothing following
+        it, skip the stack machinery and match directly (greedy or exact-count for lazy).
         """
         quant_idx = quant_indices[quant_num]
         quant = children[quant_idx]
@@ -1428,6 +1431,23 @@ class CppEmitter:
         greedy = quant.greedy
         base_name = f"q{quant_num}_base"
         count_name = f"q{quant_num}_count"
+
+        # Terminal quantifier: last quantifier with nothing following
+        is_terminal = (quant_num + 1 >= len(quant_indices) and
+                       quant_idx + 1 >= len(children))
+
+        if is_terminal:
+            self.emit(f"\n// Quantifier {quant_num}: {quant.fragment} (terminal)")
+            # Define base_name so parent's _stack_restore compiles (no-op)
+            self.emit(f"size_t {base_name} = _stack_mark();")
+            if not greedy and min_c > 0:
+                self._generate_exact_match(quant.child, min_c, case_insensitive)
+            elif not greedy:
+                pass  # Lazy with min=0: match nothing, matched stays true
+            else:
+                self._generate_quantifier_match(quant, case_insensitive)
+            self.emit("if (matched) { seq_matched = true; }")
+            return
 
         # Collect positions for this quantifier using shared stack
         self.emit(
@@ -1515,7 +1535,8 @@ class CppEmitter:
                     if i < len(children) - 1:
                         self.emit("if (!matched) continue;")
                         self.emit()
-                self.emit("if (matched) { seq_matched = true; break; }")
+                # All preceding elements have continue guards, so matched is true here
+                self.emit("seq_matched = true; break;")
 
     def _generate_nested_alternation(
         self, node: Alternation, case_insensitive: bool = False
